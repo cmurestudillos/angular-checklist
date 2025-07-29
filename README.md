@@ -216,7 +216,6 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para
 **Carlos Mur**
 - GitHub: [@carlos-mur](https://github.com/cmurestudillos)
 - LinkedIn: [Carlos Mur](https://www.linkedin.com/in/carlos-mur-estudillos/)
-- Email: carlos.mur@email.com
 
 
 ## ⭐ ¿Te gusta el proyecto?
