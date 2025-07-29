@@ -1,33 +1,83 @@
 <mat-toolbar color="primary">
   <mat-toolbar-row>
-    <img width="100" src="assets/angular_logo.png" alt="Angular" title="Angular">
-    <h1 class="titulo">{{ title }}</h1>
-    <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Example icon-button with a menu">
+    <!-- Logo y título -->
+    <div class="navbar-brand d-flex align-items-center">
+      <img
+        width="40"
+        height="40"
+        src="assets/angular_logo.png"
+        alt="Angular Logo"
+        title="Check List - Gestión de Tareas"
+        class="me-3" />
+      <h1 class="titulo mb-0">{{ title }}</h1>
+    </div>
+
+    <!-- Spacer para empujar el menú a la derecha -->
+    <span class="flex-spacer"></span>
+
+    <!-- Indicador de estado (opcional) -->
+    <div class="status-indicator me-3" *ngIf="hasDataToExport">
+      <mat-icon class="text-success" title="Datos guardados">cloud_done</mat-icon>
+    </div>
+
+    <!-- Menú principal -->
+    <button mat-icon-button [matMenuTriggerFor]="mainMenu" aria-label="Menú principal" class="menu-trigger">
       <mat-icon>more_vert</mat-icon>
     </button>
-      <mat-menu #menu="matMenu">
-        <button mat-menu-item (click)="fileInput.click()">
-          <mat-icon>arrow_upward</mat-icon>
-          <span>Importar Listas</span>
-        </button>
-        <input hidden (change)="onFileSelected($event)" #fileInput type="file" id="file">        
-        <button mat-menu-item disabled>
-          <mat-icon>arrow_downward</mat-icon>
-          <span><a id="download" href="" (click)="downloadData()" download="checklist.json">Exportar Listas</a></span>
-        </button>
-        <button mat-menu-item disabled>
-          <mat-icon>desktop_windows</mat-icon>
-          <span><a href="download/checklist.zip" download>Versi&oacute;n PC</a></span>
-        </button>
-        <button mat-menu-item disabled>
-          <mat-icon>trending_up</mat-icon>
-          <span><i><b>Version: {{ appVersion }}</b></i></span>
-        </button>
-        <button mat-menu-item disabled>
-          <span>
-            <i>Copyright © <strong>Carlos Mur</strong></i>
-          </span>
-        </button>
-      </mat-menu>
+
+    <mat-menu #mainMenu="matMenu" class="main-menu">
+      <!-- Sección de Datos -->
+      <div class="menu-section-header">
+        <small class="text-muted px-3">DATOS</small>
+      </div>
+
+      <button mat-menu-item (click)="onImportClick()" [disabled]="importButtonDisabled">
+        <mat-icon [class.spin]="isImporting">
+          {{ isImporting ? 'sync' : 'upload' }}
+        </mat-icon>
+        <span>{{ importButtonText }}</span>
+      </button>
+
+      <button mat-menu-item (click)="onExportData()" [disabled]="exportButtonDisabled">
+        <mat-icon [class.spin]="isExporting">
+          {{ isExporting ? 'sync' : 'download' }}
+        </mat-icon>
+        <span>{{ exportButtonText }}</span>
+      </button>
+
+      <mat-divider></mat-divider>
+
+      <!-- Sección de Aplicación -->
+      <div class="menu-section-header">
+        <small class="text-muted px-3">APLICACIÓN</small>
+      </div>
+
+      <button mat-menu-item (click)="onDesktopVersionClick()" disabled>
+        <mat-icon>desktop_windows</mat-icon>
+        <span>Escritorio</span>
+        <small class="ms-auto text-muted">&nbsp;(Próximamente)</small>
+      </button>
+
+      <!-- Información de versión -->
+      <div class="menu-footer">
+        <div class="px-3 py-2">
+          <div class="mt-1">
+            <small class="text-muted">Versión {{ appVersion }} - © Carlos Mur</small>
+          </div>
+        </div>
+      </div>
+    </mat-menu>
+
+    <!-- Input oculto para selección de archivos -->
+    <input
+      #fileInput
+      type="file"
+      accept=".json"
+      (change)="onFileSelected($event)"
+      style="display: none"
+      aria-label="Seleccionar archivo para importar" />
   </mat-toolbar-row>
 </mat-toolbar>
+
+<!-- Barra de progreso para operaciones en curso -->
+<mat-progress-bar mode="indeterminate" *ngIf="isExporting || isImporting" class="loading-bar"> </mat-progress-bar>

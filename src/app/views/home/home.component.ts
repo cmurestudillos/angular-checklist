@@ -1,465 +1,591 @@
-import { Component, OnInit } from '@angular/core';
-import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { CdkDragDrop } from '@angular/cdk/drag-drop';
+import { Subject, takeUntil } from 'rxjs';
+
 // Servicios
-import { ListasService } from '../../services/listas.service';
-import { TareasService } from '../../services/tareas.service';
-// Ventana Modal
-import Swal from 'sweetalert2';
+import { StorageService } from '../../services/storage.service';
+import { NotificationService } from '../../services/notificacion.service';
+
+// Modelos
+import { DrawerState } from '../../models/drawer-state.model';
+import { ListaCompleta } from '../../models/lista-completa.model';
+import { Lista } from '../../models/lista.model';
+import { SelectionState } from '../../models/selection-state.model';
+import { Tarea } from '../../models/tarea.model';
+import { TaskEditState } from '../../models/task-edit-state.model';
 
 @Component({
-  selector: "HomeComponent",
-  templateUrl: "./home.component.html",
-  styleUrls: ["./home.component.css"],
+  selector: 'app-home',
+  templateUrl: './home.component.html',
+  styleUrls: ['./home.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HomeComponent implements OnInit {
-  // Variables para Listas
-  //---------------------------
-  tituloLista: string = "";
-  idLista!: number;
-  nuevaLista: string = "";
-  oldLista: string = "";
-  listas: any = [];
-  actUpdate: any;
+export class HomeComponent implements OnInit, OnDestroy {
+  // ===== ESTADO DE LA APLICACIÓN =====
 
-  // Variables para Tareas
-  //----------------------------
-  tareas: any = [];
-  nuevaTarea: string = "";
-  oldTarea: string = '';
-  posicionTarea!: number;
-  selectedAll: any;
-  edicionTarea: any;
-  resultado: string = "";
+  // Estado de listas
+  listas: Lista[] = [];
+  listaActual: ListaCompleta | null = null;
 
-  // Otras variables
-  //---------------------------
-  storage: any = [];
-  showLista = false;
-  seleccionarTodas = false;
-  eliminarSeleccionadas = true;
+  // Estado de formularios
+  nuevoTituloLista = '';
+  nuevoTextoTarea = '';
 
-  constructor(private _listas: ListasService, private _tareas: TareasService) {}
+  // Estado de UI
+  drawerState: DrawerState = { opened: false, mode: 'create' };
+  taskEditState: TaskEditState = { isEditing: false };
+  selectionState: SelectionState = { allSelected: false, hasSelected: false, selectedCount: 0 };
 
-  ngOnInit() {
-    // Log de seguimiento
-    console.log('Carga inicial de la aplicacion.');
+  // Control de destrucción para suscripciones
+  private destroy$ = new Subject<void>();
 
-    // Comprobamos que hay datos en el localstorage
-    if(localStorage.length > 0){
-      // Cargamos las lists creadas
-      this._listas.cargaListas().subscribe((data) => {
-        this.listas = data;
-        this.storage = data;
-      });
+  constructor(
+    private storageService: StorageService,
+    private notificationService: NotificationService,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  // ===== LIFECYCLE HOOKS =====
+
+  ngOnInit(): void {
+    console.log('🚀 HomeComponent inicializando...');
+
+    // Verificar servicios
+    this.checkServices();
+
+    // Cargar listas existentes
+    this.loadListas();
+
+    // Suscribirse a cambios de listas
+    this.subscribeToListasChanges();
+
+    // Método de debugging (remover en producción)
+    setTimeout(() => {
+      this.debugState();
+    }, 1000);
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  // ===== MÉTODOS PRIVADOS DE INICIALIZACIÓN =====
+
+  private checkServices(): void {
+    console.log('🔍 Verificando servicios...');
+
+    console.log('StorageService:', this.storageService ? '✅' : '❌');
+    console.log('NotificationService:', this.notificationService ? '✅' : '❌');
+
+    if (this.storageService) {
+      console.log('StorageService methods:');
+      console.log('- crearLista:', typeof this.storageService.crearLista);
+      console.log('- getListas:', typeof this.storageService.getListas);
     }
   }
-  //=========================================================================================//
-  // function datosLista: Obtenemos los datos de la lista seleccionada                       //
-  //=========================================================================================//
-  datosLista(titulo: string, id: number) {
-    // Log de seguimiento
-    console.log('datosLista()');
 
-    this.tituloLista = titulo;
-    this.idLista = id;
-    this.showLista = true;
-    this.tareas = JSON.parse(localStorage.getItem(titulo) || "[]");
-    // Deshabilitar boton para selecciona multiple
-    if(this.tareas.length === 0 || this.tareas.length === 1){
-      this.seleccionarTodas = true;
-    }else{
-      this.seleccionarTodas = false;
-    }
-  }
-  //=========================================================================================//
-  // function datosListaEdicion: Obtenemos los datos de la lista a editar                    //
-  //=========================================================================================//
-  datosListaEdicion(titulo: string, drawer:any) {
-    // Log de seguimiento
-    console.log('datosListaEdicion()');
+  private loadListas(): void {
+    console.log('🔄 Cargando listas...');
 
-    this.nuevaLista = titulo;
-    this.oldLista = titulo;
-    drawer.opened = true;
-    this.actUpdate = true;
-  }
-  //=========================================================================================//
-  // function datosTareaEdicion: Obtenemos los datos de la tarea a editar                    //
-  //=========================================================================================// 
-  datosTareaEdicion(tareaEditada: string, posicion: number){
-    // Log de seguimiento
-    console.log('datosTareaEdicion()');
-
-    this.oldTarea = tareaEditada;
-    this.nuevaTarea = tareaEditada;
-    this.posicionTarea = posicion;
-    this.edicionTarea = true;
-  }
-  //=========================================================================================//
-  // function valorInput: Obtenemos el valor del Input para modificar el registro            //
-  //=========================================================================================// 
-  valorInput(evt:any) {
-    this.resultado = evt.target.value;
-  }
-  //=========================================================================================//
-  //                                                                                         //
-  //                                  ACCIONES PARA LISTAS:                                  //
-  //                                  ---------------------                                  //
-  // Funciones:                                                                              //
-  //  - createLista(param: lista)                                                            //
-  //  - updateLista(param: newValue, oldValue,  drawer)                                      //
-  //  - deleteLista(param: lista)                                                            //
-  //  - dropLista(param: event)                                                              //
-  //                                                                                         //
-  //=========================================================================================//
-  //=========================================================================================//
-  // function createLista: Crear nueva listas                                                //
-  //=========================================================================================//
-  createLista(listaParam:any, drawer:any) {
-    // Log de seguimiento
-    console.log('createLista()');
-
-    // Si la lista no existe, la creamos
-    this._listas.crearLista(listaParam).subscribe((data: any) => {
-      if (data.status === 200) {
-        // Mostramos mensaje satisfactorio
-        Swal.fire({
-          title: "Correcto",
-          text: "Se ha creado la lista correctamente.",
-          icon: "success",
-          confirmButtonText: "Ok",
-        }).then(result => {
-        // Limpiamos el formulario
-        this.nuevaLista = "";
-        drawer.opened = false;
-        this.listas = data.listas;
-        });        
-      } else {
-        // Mostramos mensaje de error
-        Swal.fire({
-          title: "Error",
-          text: "La lista ya existe.",
-          icon: "error",
-          confirmButtonText: "Ok",
-        });
-      }
-    });
-  }
-  //=========================================================================================//
-  // function updateLista: Modificar el titulo de la lista                                   //
-  //=========================================================================================//
-  updateLista(nuevalistaParam:any, oldlistaParam:any, drawer:any) {
-    // Log de seguimiento
-    console.log('updateLista()');    
-
-    // Si la lista no existe, la creamos
-    this._listas
-      .editarLista(nuevalistaParam, oldlistaParam)
-      .subscribe((data: any) => {
-        if (data === 200) {
-          // Mostramos mensaje satisfactorio
-          Swal.fire({
-            title: "Correcto",
-            text: "Se ha modificado la lista correctamente.",
-            icon: "success",
-            confirmButtonText: "Ok",
-          });
-          // Limpiamos el formulario
-          this.nuevaLista = "";
-          // Deshabilitamos la edicion
-          this.actUpdate = false;
-          drawer.opened = false;
-          this.showLista = false;
-        } else {
-          // Mostramos mensaje de error
-          Swal.fire({
-            title: "Error",
-            text: "Ha ocurrido un error al modificar la lista.",
-            icon: "error",
-            confirmButtonText: "Ok",
-          });
-        }
-      });
-  }
-  //=========================================================================================//
-  // function deleteLista: Lista a eliminar                                                  //
-  //=========================================================================================//
-  deleteLista(lista:any) {
-    // Log de seguimiento
-    console.log('deleteLista()'); 
-
-    // Si la lista no existe, la creamos
-    this._listas.eliminarLista(lista).subscribe((data: any) => {
-      if (data === 200) {
-        // Mostramos mensaje satisfactorio
-        Swal.fire({
-          title: "Correcto",
-          text: "Se ha eliminado la lista correctamente.",
-          icon: "success",
-          confirmButtonText: "Ok",
-        });
-        this.storage = this.listas;
-        this.showLista = false;
-      } else {
-        // Mostramos mensaje de error
-        Swal.fire({
-          title: "Error",
-          text: "Ha ocurrido un error al eliminar la lista.",
-          icon: "error",
-          confirmButtonText: "Ok",
-        });
-      }
-    });
-  }
-  //=========================================================================================//
-  //                                                                                         //
-  //                                      ACCIONES PARA TAREAS:                              //
-  //                                      ---------------------                              //
-  // Funciones:                                                                              //
-  //  - createTarea(param:lista)                                                             //
-  //  - updateTarea(param:lista, oldTarea)                                                   //
-  //  - deleteTarea(param:lista, posicion)                                                   //
-  //  - cancelTarea()                                                                        //
-  //  - dropTarea(param: event, lista, ind)                                                  //
-  //  - selectAll()                                                                          //
-  //  - deleteTareas(param: lista)                                                           //
-  //  - comprobarTareasSeleccionadas(params: lista, posicion)                                //
-  //                                                                                         //
-  //=========================================================================================//
-  //=========================================================================================//
-  // function createTarea: Anadir nueva tarea a la lista seleccionada                        //
-  //=========================================================================================//
-  createTarea(lista:any) {
-    // Log de seguimiento
-    console.log('createTarea()'); 
-
-    //  Si la lista no existe, la creamos
-    this._tareas.crearTarea(lista, this.resultado).subscribe((data: any) => {
-    if (data === 200) {
-      // Mostramos mensaje satisfactorio
-      Swal.fire({
-        title: "Correcto",
-        text: "Se ha creado la tarea correctamente.",
-        icon: "success",
-        confirmButtonText: "Ok",
-      }).then(result => {
-          // Actualizamos la lista de tareas
-        const localStorageItem = localStorage.getItem(lista);
-        this.tareas = localStorageItem ? JSON.parse(localStorageItem) : [];
-        // Limpiamos el formulario
-        this.nuevaTarea = "";
-        // Validamos el boton para seleccionar todas
-        if(this.tareas.length > 1){
-          this.seleccionarTodas = false;
-        }else{
-          this.seleccionarTodas = true;
-        }
-      });
-    } else {
-      // Mostramos mensaje de error
-      Swal.fire({
-        title: "Error",
-        text: "La tarea ya existe.",
-        icon: "error",
-        confirmButtonText: "Ok",
-      });
-     }
-    });   
-  }
-  //=========================================================================================//
-  // function updateTarea: Actualizar una tarea de la lista seleccionada                     //
-  //=========================================================================================//
-  updateTarea(tituloLista:any, oldTarea:any) {
-    // Log de seguimiento
-    console.log('updateTarea()');
-
-    //  Si la lista no existe, la creamos
-    this._tareas.actualizarTarea(tituloLista, oldTarea, this.resultado).subscribe((data: any) => {
-      if (data === 200) {
-        // Mostramos mensaje satisfactorio
-        Swal.fire({
-          title: "Correcto",
-          text: "Se ha modificado la tarea correctamente.",
-          icon: "success",
-          confirmButtonText: "Ok",
-        }).then(result => {
-          // recuperamos los datos modificados y los mostramos
-          this.tareas = JSON.parse(localStorage.getItem(tituloLista) || "[]");
-          // Limpiamos el formulario
-          this.nuevaTarea = "";
-          // Deshabilitamos la edicion
-          this.edicionTarea = false;
-        });
-      } else {
-        // Mostramos mensaje de error
-        Swal.fire({
-          title: "Error",
-          text: "Ha ocurrdo un error al modificar la tarea.",
-          icon: "error",
-          confirmButtonText: "Ok",
-        });
-       }
-      });     
-  }
-  //=========================================================================================//
-  // function deleteTarea: Eliminar tarea seleccinada de una lista seleccionada              //
-  //=========================================================================================//
-  deleteTarea(posicion:any) {
-    // Log de seguimiento
-    console.log('deleteTarea()');    
-
-    // Obtenemos los datos de la lista
-    var datoslistaseleccionada = {
-      title: localStorage.key(this.idLista) ?? "",
-      tareas: JSON.parse(localStorage.getItem(localStorage.key(this.idLista) ?? "") ?? "[]")
-    }
-
-    //  Tarea a eliminar de la lista
-    this._tareas.eliminarTarea(posicion, datoslistaseleccionada).subscribe((data: any) => {
-      if (data === 200) {
-        // Mostramos mensaje satisfactorio
-        Swal.fire({
-          title: "Correcto",
-          text: "Se ha eliminado la tarea correctamente.",
-          icon: "success",
-          confirmButtonText: "Ok",
-        }).then(result => {
-           // Actualizamos la lista de tareas
-          this.tareas = JSON.parse(localStorage.getItem(datoslistaseleccionada.title) ?? "");
-          // Validamos el boton para seleccionar todas
-          if(this.tareas.length > 1){
-            this.seleccionarTodas = false;
-          }else{
-            this.seleccionarTodas = true;
+    this.storageService
+      .getListas()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: response => {
+          if (response.success && response.data) {
+            console.log('✅ Listas cargadas:', response.data);
+            this.listas = response.data;
+            this.cdr.markForCheck();
+          } else {
+            console.log('❌ Error cargando listas:', response.error);
           }
-        });
-      } else {
-        // Mostramos mensaje de error
-        Swal.fire({
-          title: "Error",
-          text: "La tarea no se ha podido eliminar.",
-          icon: "error",
-          confirmButtonText: "Ok",
-        });
-      }
-    });    
+        },
+        error: error => {
+          console.error('❌ Error en loadListas:', error);
+          this.notificationService.errorGeneric('cargar las listas');
+        },
+      });
   }
-  //=========================================================================================//
-  // function cancelTarea: Cancelar la edicion de la tarea.                                  //
-  //=========================================================================================//
-  cancelTarea() {
-    // Log de seguimiento
-    console.log('cancelTarea()'); 
 
-    this.edicionTarea = false;
-    this.nuevaTarea = "";
-  }  
-  //=========================================================================================//
-  // function dropTarea: Cambiar el orden de las tareas mediante Drag/Drop                   //
-  //=========================================================================================//
-  dropTarea(event: CdkDragDrop<string[]>, lista:any) {
-    // Log de seguimiento
-    console.log('dropTarea()');
+  private subscribeToListasChanges(): void {
+    this.storageService.listas$.pipe(takeUntil(this.destroy$)).subscribe(listas => {
+      this.listas = listas;
 
-    // Recuperamos las tareas de la lista
-    this.tareas = JSON.parse(localStorage.getItem(lista) || "[]");
-    moveItemInArray(this.tareas, event.previousIndex, event.currentIndex);
-    // // Guardamos el nuevo orden de las tareas
-    localStorage.setItem(lista, JSON.stringify(this.tareas));
-    // // Recuperamos las tareas ordenadas
-    this.tareas = JSON.parse(localStorage.getItem(lista) || "[]");
-    // // Actualizamos el storage con los nuevos datos
-    this.storage = this.listas;
-  }
-  //=========================================================================================//
-  // function selectAll: Seleccionar todas las tareas de una lista                           //
-  //=========================================================================================//
-  selectAll(tituloLista:any) {
-    // Log de seguimiento
-    console.log('selectAll()');
-
-    this.selectedAll = !this.selectedAll;
-
-    for (var i = 0; i < this.tareas.length; i++) {
-      this.tareas[i].selected = this.selectedAll;
-      this.tareas[i].completed = this.selectedAll;
-    }
-
-    // Guardamos los atributos
-    localStorage.setItem(tituloLista, JSON.stringify(this.tareas));
-
-    // Validamos para activar o desactivar el boton
-    if (this.selectedAll) {
-      this.seleccionarTodas = false;
-      this.eliminarSeleccionadas = false;
-    }else{
-      this.eliminarSeleccionadas = true;
-    }
-  }  
-  //=========================================================================================//
-  // function deleteTareas: Eliminar varias tareas de una lista                              //
-  //=========================================================================================//
-  deleteTareas(tituloLista:any) {
-    // Log de seguimiento
-    console.log('deleteTareas()');    
-
-    // Obtenemos los datos de la lista
-    var datoslistaseleccionada = {
-      title: localStorage.key(this.idLista),
-      tareas: JSON.parse(localStorage.getItem(localStorage.key(this.idLista) || "") || "[]")
-    }
-
-    //  Tarea a eliminar de la lista
-    this._tareas.eliminarTareas(tituloLista, datoslistaseleccionada).subscribe((data: any) => {
-      if (data === 200) {
-        // Mostramos mensaje satisfactorio
-        Swal.fire({
-          title: "Correcto",
-          text: "Se han eliminado la tareas correctamente.",
-          icon: "success",
-          confirmButtonText: "Ok",
-        }).then(result => {
-           // Actualizamos la lista de tareas
-          this.tareas = JSON.parse(localStorage.getItem(datoslistaseleccionada.title || "") || "[]");
-          // Deshabilitamos los botones de seleccionar y eliminar
-          this.seleccionarTodas = true;
-          this.eliminarSeleccionadas = true;
-        });
-      } else {
-        // Mostramos mensaje de error
-        Swal.fire({
-          title: "Error",
-          text: "Las tareas no se han podido eliminar.",
-          icon: "error",
-          confirmButtonText: "Ok",
-        });
+      // Si estamos viendo una lista que fue eliminada, limpiar la vista
+      if (this.listaActual && !listas.find(l => l.id === this.listaActual!.id)) {
+        this.listaActual = null;
       }
+
+      this.cdr.markForCheck();
     });
   }
-  //=========================================================================================//
-  // function comprobarTareasSeleccionadas: Seleccionar una tarea de la lista                //
-  //=========================================================================================//
-  comprobarTareasSeleccionadas(tituloLista:any, posicion:any) {
-    // Log de seguimiento
-    console.log('comprobarTareasSeleccionadas()'); 
 
-    var datoslistaseleccionada = {
-      title: localStorage.key(this.idLista) || "",
-      tareas: JSON.parse(localStorage.getItem(localStorage.key(this.idLista) || "") || "[]")
+  // ===== GESTIÓN DE LISTAS =====
+
+  abrirFormularioNuevaLista(): void {
+    console.log('🚀 Abriendo formulario nueva lista...');
+
+    this.drawerState = { opened: true, mode: 'create' };
+    this.nuevoTituloLista = '';
+    this.listaActual = null;
+
+    console.log('Estado actualizado:', {
+      drawerState: this.drawerState,
+      nuevoTituloLista: this.nuevoTituloLista,
+      modoFormulario: this.modoFormulario,
+    });
+
+    this.cdr.markForCheck();
+
+    // Enfocar el input después de que se abra el modal
+    setTimeout(() => {
+      const input = document.querySelector('input[placeholder*="nombre de la lista"]') as HTMLInputElement;
+      if (input) {
+        input.focus();
+        console.log('✅ Input enfocado');
+      } else {
+        console.log('❌ Input no encontrado');
+      }
+    }, 100);
+  }
+
+  abrirFormularioEditarLista(lista: Lista): void {
+    console.log('🚀 Abriendo formulario editar lista:', lista);
+
+    this.drawerState = { opened: true, mode: 'edit' };
+    this.nuevoTituloLista = lista.title;
+
+    this.cdr.markForCheck();
+
+    setTimeout(() => {
+      const input = document.querySelector('input[placeholder*="nombre de la lista"]') as HTMLInputElement;
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 100);
+  }
+
+  cerrarDrawer(): void {
+    console.log('🚪 Cerrando drawer...');
+
+    this.drawerState = { opened: false, mode: 'create' };
+    this.nuevoTituloLista = '';
+
+    this.cdr.markForCheck();
+  }
+
+  async crearLista(): Promise<void> {
+    console.log('🚀 Iniciando creación de lista...');
+    console.log('Título ingresado:', `"${this.nuevoTituloLista}"`);
+
+    // Validación mejorada
+    if (!this.nuevoTituloLista || !this.nuevoTituloLista.trim()) {
+      console.log('❌ Validación fallida: título vacío');
+      await this.notificationService.validationError('El nombre de la lista no puede estar vacío');
+      return;
     }
 
-    // Validamos si la tarea para marcarla o desmarcarla
-    if(datoslistaseleccionada.tareas[posicion].selected){
-      datoslistaseleccionada.tareas[posicion].selected = false;
-      datoslistaseleccionada.tareas[posicion].completed = false;
-    }else{
-      datoslistaseleccionada.tareas[posicion].selected = true;
-      datoslistaseleccionada.tareas[posicion].completed = true;
+    const titulo = this.nuevoTituloLista.trim();
+    console.log('Título procesado:', `"${titulo}"`);
+
+    try {
+      console.log('📡 Llamando a storageService.crearLista...');
+
+      this.storageService
+        .crearLista(titulo)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: async response => {
+            console.log('📨 Respuesta recibida:', response);
+
+            if (response.success && response.data) {
+              console.log('✅ Lista creada exitosamente:', response.data);
+
+              // Mostrar notificación de éxito
+              await this.notificationService.successListaOperation('created', response.data.title);
+
+              // Cerrar el modal
+              this.cerrarDrawer();
+
+              // Actualizar la lista de listas
+              this.loadListas();
+
+              console.log('✅ Proceso completado exitosamente');
+            } else {
+              console.log('❌ Error en la respuesta:', response.error);
+              await this.notificationService.errorDuplicate('lista');
+            }
+          },
+          error: async error => {
+            console.error('❌ Error en la suscripción:', error);
+            await this.notificationService.errorGeneric('crear la lista');
+          },
+        });
+    } catch (error) {
+      console.error('❌ Error inesperado:', error);
+      await this.notificationService.errorGeneric('crear la lista');
+    }
+  }
+
+  async actualizarLista(): Promise<void> {
+    if (!this.listaActual || !this.nuevoTituloLista.trim()) {
+      await this.notificationService.validationError('El nombre de la lista no puede estar vacío');
+      return;
     }
 
-    // Guardamos los atributos
-    localStorage.setItem(tituloLista, JSON.stringify(datoslistaseleccionada.tareas));
+    this.storageService
+      .actualizarLista(this.listaActual.id, this.nuevoTituloLista)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: async response => {
+          if (response.success && response.data) {
+            await this.notificationService.successListaOperation('updated', response.data.title);
+            this.cerrarDrawer();
 
-    return true;
+            // Actualizar la lista actual
+            if (this.listaActual) {
+              this.listaActual.title = response.data.title;
+              this.cdr.markForCheck();
+            }
+          } else {
+            await this.notificationService.errorDuplicate('lista');
+          }
+        },
+        error: () => this.notificationService.errorGeneric('actualizar la lista'),
+      });
+  }
+
+  async eliminarLista(lista: Lista): Promise<void> {
+    const result = await this.notificationService.confirmDeleteLista(lista.title);
+
+    if (result.isConfirmed) {
+      this.storageService
+        .eliminarLista(lista.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: async response => {
+            if (response.success) {
+              await this.notificationService.successListaOperation('deleted');
+
+              // Si era la lista actual, limpiar la vista
+              if (this.listaActual?.id === lista.id) {
+                this.listaActual = null;
+                this.cdr.markForCheck();
+              }
+            }
+          },
+          error: () => this.notificationService.errorGeneric('eliminar la lista'),
+        });
+    }
+  }
+
+  seleccionarLista(lista: Lista): void {
+    console.log('📋 Seleccionando lista:', lista);
+
+    this.storageService
+      .getListaCompleta(lista.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: response => {
+          if (response.success && response.data) {
+            this.listaActual = response.data;
+            this.actualizarEstadoSeleccion();
+            this.cerrarDrawer();
+            this.cdr.markForCheck();
+          }
+        },
+        error: () => this.notificationService.errorGeneric('cargar la lista'),
+      });
+  }
+
+  // ===== GESTIÓN DE TAREAS =====
+
+  async crearTarea(): Promise<void> {
+    if (!this.listaActual || !this.nuevoTextoTarea.trim()) {
+      await this.notificationService.validationError('El texto de la tarea no puede estar vacío');
+      return;
+    }
+
+    this.storageService
+      .crearTarea(this.listaActual.id, this.nuevoTextoTarea)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: async response => {
+          if (response.success && response.data) {
+            await this.notificationService.successTareaOperation('created');
+            this.nuevoTextoTarea = '';
+            this.recargarListaActual();
+          } else {
+            await this.notificationService.errorDuplicate('tarea');
+          }
+        },
+        error: () => this.notificationService.errorGeneric('crear la tarea'),
+      });
+  }
+
+  iniciarEdicionTarea(tarea: Tarea): void {
+    this.taskEditState = {
+      isEditing: true,
+      taskId: tarea.id,
+      originalText: tarea.tarea,
+    };
+    this.nuevoTextoTarea = tarea.tarea;
+    this.cdr.markForCheck();
+
+    // Enfocar el input
+    setTimeout(() => {
+      const input = document.querySelector('input[matInput]') as HTMLInputElement;
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 100);
+  }
+
+  cancelarEdicionTarea(): void {
+    this.taskEditState = { isEditing: false };
+    this.nuevoTextoTarea = '';
+    this.cdr.markForCheck();
+  }
+
+  async actualizarTarea(): Promise<void> {
+    if (!this.listaActual || !this.taskEditState.taskId || !this.nuevoTextoTarea.trim()) {
+      await this.notificationService.validationError('El texto de la tarea no puede estar vacío');
+      return;
+    }
+
+    this.storageService
+      .actualizarTarea(this.listaActual.id, this.taskEditState.taskId, this.nuevoTextoTarea)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: async response => {
+          if (response.success) {
+            await this.notificationService.successTareaOperation('updated');
+            this.cancelarEdicionTarea();
+            this.recargarListaActual();
+          }
+        },
+        error: () => this.notificationService.errorGeneric('actualizar la tarea'),
+      });
+  }
+
+  async eliminarTarea(tarea: Tarea): Promise<void> {
+    const result = await this.notificationService.confirmDeleteTarea();
+
+    if (result.isConfirmed && this.listaActual) {
+      this.storageService
+        .eliminarTarea(this.listaActual.id, tarea.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: async response => {
+            if (response.success) {
+              await this.notificationService.successTareaOperation('deleted');
+              this.recargarListaActual();
+            }
+          },
+          error: () => this.notificationService.errorGeneric('eliminar la tarea'),
+        });
+    }
+  }
+
+  toggleTareaCompleted(tarea: Tarea): void {
+    if (!this.listaActual) return;
+
+    this.storageService
+      .toggleTareaCompleted(this.listaActual.id, tarea.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.recargarListaActual();
+        },
+        error: () => this.notificationService.errorGeneric('actualizar la tarea'),
+      });
+  }
+
+  // ===== GESTIÓN DE SELECCIÓN MÚLTIPLE =====
+
+  toggleSeleccionarTodas(): void {
+    if (!this.listaActual) return;
+
+    const nuevoEstado = !this.selectionState.allSelected;
+
+    this.storageService
+      .toggleSeleccionarTodas(this.listaActual.id, nuevoEstado)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.recargarListaActual();
+        },
+        error: () => this.notificationService.errorGeneric('seleccionar las tareas'),
+      });
+  }
+
+  async eliminarTareasSeleccionadas(): Promise<void> {
+    if (!this.listaActual || !this.selectionState.hasSelected) return;
+
+    const result = await this.notificationService.confirmDeleteTareasSeleccionadas(this.selectionState.selectedCount);
+
+    if (result.isConfirmed) {
+      this.storageService
+        .eliminarTareasSeleccionadas(this.listaActual.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: async response => {
+            if (response.success) {
+              await this.notificationService.successTareaOperation('bulk_deleted', response.data);
+              this.recargarListaActual();
+            }
+          },
+          error: () => this.notificationService.errorGeneric('eliminar las tareas'),
+        });
+    }
+  }
+
+  // ===== DRAG & DROP =====
+
+  onTareaDrop(event: CdkDragDrop<Tarea[]>): void {
+    if (!this.listaActual || event.previousIndex === event.currentIndex) return;
+
+    this.storageService
+      .reordenarTareas(this.listaActual.id, event.previousIndex, event.currentIndex)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.recargarListaActual();
+        },
+        error: () => this.notificationService.errorGeneric('reordenar las tareas'),
+      });
+  }
+
+  // ===== MÉTODOS DE UTILIDAD =====
+
+  private recargarListaActual(): void {
+    if (!this.listaActual) return;
+
+    this.storageService
+      .getListaCompleta(this.listaActual.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: response => {
+          if (response.success && response.data) {
+            this.listaActual = response.data;
+            this.actualizarEstadoSeleccion();
+            this.cdr.markForCheck();
+          }
+        },
+      });
+  }
+
+  private actualizarEstadoSeleccion(): void {
+    if (!this.listaActual?.tareas) {
+      this.selectionState = { allSelected: false, hasSelected: false, selectedCount: 0 };
+      return;
+    }
+
+    const tareasSeleccionadas = this.listaActual.tareas.filter(t => t.selected);
+    const totalTareas = this.listaActual.tareas.length;
+
+    this.selectionState = {
+      allSelected: totalTareas > 0 && tareasSeleccionadas.length === totalTareas,
+      hasSelected: tareasSeleccionadas.length > 0,
+      selectedCount: tareasSeleccionadas.length,
+    };
+  }
+
+  getTaskCount(listaId: string): number {
+    try {
+      const storageKey = `checklist_lista_${listaId}`;
+      const tareasData = localStorage.getItem(storageKey);
+      if (tareasData) {
+        const tareas = JSON.parse(tareasData);
+        return Array.isArray(tareas) ? tareas.length : 0;
+      }
+      return 0;
+    } catch (error) {
+      console.warn('Error getting task count:', error);
+      return 0;
+    }
+  }
+
+  // ===== GETTERS PARA EL TEMPLATE =====
+
+  get puedeSeleccionarTodas(): boolean {
+    return this.listaActual?.tareas ? this.listaActual.tareas.length > 1 : false;
+  }
+
+  get puedeEliminarSeleccionadas(): boolean {
+    return this.selectionState.hasSelected;
+  }
+
+  get textoBotonSeleccionar(): string {
+    return this.selectionState.allSelected ? 'Deseleccionar todas' : 'Seleccionar todas';
+  }
+
+  get modoFormulario(): 'create' | 'edit' {
+    return this.drawerState.mode;
+  }
+
+  get estaEditandoTarea(): boolean {
+    return this.taskEditState.isEditing;
+  }
+
+  // ===== TRACKING FUNCTIONS PARA PERFORMANCE =====
+
+  trackByListaId(index: number, lista: Lista): string {
+    return lista.id;
+  }
+
+  trackByTareaId(index: number, tarea: Tarea): string {
+    return tarea.id;
+  }
+
+  // ===== MÉTODOS DE DEBUG (REMOVER EN PRODUCCIÓN) =====
+
+  debugState(): void {
+    console.log('=== DEBUG STATE ===');
+    console.log('drawerState:', this.drawerState);
+    console.log('nuevoTituloLista:', this.nuevoTituloLista);
+    console.log('modoFormulario:', this.modoFormulario);
+    console.log('listas:', this.listas);
+    console.log('listaActual:', this.listaActual);
+    console.log('localStorage keys:', Object.keys(localStorage));
+  }
+
+  testStorageService(): void {
+    console.log('=== TEST STORAGE SERVICE ===');
+
+    // Test básico de creación
+    this.storageService.crearLista('Test Lista ' + Date.now()).subscribe({
+      next: response => {
+        console.log('Test crearLista response:', response);
+        if (response.success) {
+          console.log('✅ StorageService funcionando correctamente');
+        } else {
+          console.log('❌ StorageService error:', response.error);
+        }
+      },
+      error: error => {
+        console.error('❌ StorageService error:', error);
+      },
+    });
+  }
+
+  onDebugClick(): void {
+    this.debugState();
+    this.testStorageService();
+  }
+
+  resetState(): void {
+    console.log('🔄 Reseteando estado...');
+
+    this.drawerState = { opened: false, mode: 'create' };
+    this.nuevoTituloLista = '';
+    this.taskEditState = { isEditing: false };
+    this.selectionState = { allSelected: false, hasSelected: false, selectedCount: 0 };
+
+    this.cdr.markForCheck();
+    console.log('✅ Estado reseteado');
   }
 }

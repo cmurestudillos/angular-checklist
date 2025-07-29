@@ -1,112 +1,217 @@
-import { Component } from '@angular/core';
-// Version de la aplicacion
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
+import { Subject, takeUntil } from 'rxjs';
+
+// Servicios
+import { ExportImportService } from '../../services/export-import.service';
+import { NotificationService } from '../../services/notificacion.service';
 import packageInfo from '../../../../package.json';
 
 @Component({
-  selector: 'NavBarComponent',
+  selector: 'app-navbar',
   templateUrl: './navbar.component.html',
-  styleUrls: ['./navbar.component.css']
+  styleUrls: ['./navbar.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class NavbarComponent{
-  title = 'Check List';
+export class NavbarComponent implements OnInit, OnDestroy {
+  // ===== PROPIEDADES PÚBLICAS =====
+
+  readonly title = 'Check List';
   public appVersion: string = packageInfo.version;
-  fileToUpload!: File;
-  fileLocalstorage: any;
-  contenidoFichero:any = [];
-  existeLista:boolean = true;
 
-  constructor() {}
+  // Estado de carga
+  isExporting = false;
+  isImporting = false;
+  hasDataToExport = false;
 
-  //=========================================================================================//
-  // function downloadData: Exporta los datos del localStorage en un .json                   //
-  //=========================================================================================// 
-  downloadData(){
+  // ===== REFERENCIAS A ELEMENTOS DEL DOM =====
+
+  @ViewChild('fileInput', { static: false })
+  fileInput!: ElementRef<HTMLInputElement>;
+
+  // ===== CONTROL DE SUSCRIPCIONES =====
+
+  private destroy$ = new Subject<void>();
+
+  constructor(
+    private exportImportService: ExportImportService,
+    private notificationService: NotificationService
+  ) {
+    this.loadAppVersion();
+  }
+
+  // ===== LIFECYCLE HOOKS =====
+
+  ngOnInit(): void {
+    this.checkDataAvailability();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  // ===== MÉTODOS PRIVADOS DE INICIALIZACIÓN =====
+
+  private loadAppVersion(): void {
     try {
-      var downloadlink = document.getElementById('download')  as HTMLLinkElement;
-      // Valor inicial para el fichero.json
-      var text = '[';
-      // Numero de lecturas
-      var contador = 1;
-      // Leemos el localstorage
-      for(let index = 0; index < localStorage.length; index++) {
-        // Recuperamos los datos por "key"
-        this.fileLocalstorage = {
-          title: localStorage.key(index),
-          tareas: JSON.parse(localStorage.getItem(localStorage.key(index) as any) as any)
-        }      
-        // Se guardan en la variable para escribir el fichero .json
-        text += JSON.stringify(this.fileLocalstorage);
-
-        // Valida cuandos documentos hay en el localstorage,
-        // para separalos por "," y luego cerrar el objeto "]"
-        if(contador === localStorage.length){
-          text += ']';
-        }else{
-          text += ',';
-        }
-        contador += 1;
-      }
-
-      // Generamos el tipo de fichero (JSON)
-      var file = new Blob([text], {type: 'application/json'});
-      downloadlink.href = URL.createObjectURL(file);
-      // downloadlink.download = 'localStorageData.txt';  
-
-      console.log('Descarga del fichero correcta.');    
+      // En un proyecto real, podrías importar package.json o tener esta info en un servicio
+      // import packageInfo from '../../../../package.json';
+      // this.appVersion = packageInfo.version;
+      this.appVersion = '1.0.0'; // Fallback por ahora
     } catch (error) {
-      console.log('Error en la descarga del fichero');
-      console.log(error);
+      console.warn('No se pudo cargar la versión de package.json');
+      this.appVersion = '1.0.0';
     }
   }
-  //=========================================================================================//
-  // function onFileSelected: Importa los datos del localStorage                             //
-  //=========================================================================================//  
-  onFileSelected(file: any) {
-    this.fileToUpload = file.target.files[0];
-    
-    // Validamos que sea un fichero valido
-    if (typeof (FileReader) !== 'undefined') {
-      let fileReader = new FileReader();
-      fileReader.onload = (e) => {
-        // Leeemos el contenido del fichero y lo extraemos
-        this.contenidoFichero = fileReader.result;
-        this.contenidoFichero = JSON.parse(this.contenidoFichero);
 
-        // Leemos el localstorage
-        if(localStorage.length > 0 ){
-          var contenidoStorage:any = [];
-          for (const key in this.contenidoFichero) {
-            if (Object.prototype.hasOwnProperty.call(this.contenidoFichero, key)) {
-              for (let index = 0; index < localStorage.length; index++) {
-                contenidoStorage = localStorage.key(index);
-                // Verificamos que los datos a introducir no existan
-                if(this.contenidoFichero[key].title === contenidoStorage){
-                  this.existeLista = true;
-                  console.log('Ya existe la lista: ' + this.contenidoFichero[key].title);
-                  index = localStorage.length;
-                }else{
-                  this.existeLista = false;
-                }            
-              }
-              // Si los datos a importar no existen, se crean en el localstorage
-              if(!this.existeLista){
-                // Guardamos en el localstorage los datos cargados del fichero
-                localStorage.setItem(this.contenidoFichero[key].title, JSON.stringify(this.contenidoFichero[key].tareas));
-                console.log('Lista ' + this.contenidoFichero[key].title + ' creada.');
-              }
-            }
-          }          
-        }else{
-          for (let index = 0; index < this.contenidoFichero.length; index++) {
-            // Guardamos en el localstorage los datos cargados del fichero
-            localStorage.setItem(this.contenidoFichero[index].title, JSON.stringify(this.contenidoFichero[index].tareas)); 
-          }
-          // Cargamos la pagina con la importacion de datos
-          window.location.reload();
-        }
+  private checkDataAvailability(): void {
+    this.exportImportService
+      .hasDataToExport()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: hasData => {
+          this.hasDataToExport = hasData;
+        },
+        error: () => {
+          this.hasDataToExport = false;
+        },
+      });
+  }
 
-      }
-      fileReader.readAsText(this.fileToUpload);
+  // ===== GESTIÓN DE EXPORTACIÓN =====
+
+  async onExportData(): Promise<void> {
+    if (this.isExporting) return;
+
+    // Verificar si hay datos para exportar
+    if (!this.hasDataToExport) {
+      await this.notificationService.showInfo('No hay listas creadas para exportar', 'Sin datos');
+      return;
     }
-  }  
+
+    // Confirmar exportación
+    const result = await this.notificationService.showConfirmation(
+      'Se descargará un archivo JSON con todas tus listas y tareas.',
+      '¿Exportar datos?',
+      'Sí, exportar',
+      'Cancelar'
+    );
+
+    if (!result.isConfirmed) return;
+
+    this.isExporting = true;
+    this.notificationService.showLoading('Preparando exportación...');
+
+    try {
+      // Pequeña pausa para mostrar el loading
+      setTimeout(() => {
+        this.exportImportService.downloadData();
+        this.isExporting = false;
+        this.notificationService.hideLoading();
+      }, 1000);
+    } catch (error) {
+      this.isExporting = false;
+      this.notificationService.hideLoading();
+      await this.notificationService.errorGeneric('exportar los datos');
+    }
+  }
+
+  // ===== GESTIÓN DE IMPORTACIÓN =====
+
+  onImportClick(): void {
+    if (this.isImporting) return;
+
+    // Trigger del input file
+    this.fileInput.nativeElement.click();
+  }
+
+  async onFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    if (!file) return;
+
+    // Limpiar el input para permitir seleccionar el mismo archivo de nuevo
+    input.value = '';
+
+    await this.processImportFile(file);
+  }
+
+  private async processImportFile(file: File): Promise<void> {
+    this.isImporting = true;
+    this.notificationService.showLoading('Procesando archivo...');
+
+    try {
+      this.exportImportService
+        .processImportFile(file)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: async response => {
+            this.isImporting = false;
+            this.notificationService.hideLoading();
+
+            if (response.success && response.data) {
+              this.exportImportService.showImportResults(response.data);
+
+              // Actualizar el estado de disponibilidad de datos
+              this.checkDataAvailability();
+
+              // Si se importaron datos, recargar la página para reflejar cambios
+              if (response.data.listasCreadas > 0) {
+                const shouldReload = await this.notificationService.showConfirmation(
+                  'Para ver las listas importadas correctamente, es recomendable recargar la página.',
+                  '¿Recargar página?',
+                  'Sí, recargar',
+                  'Continuar sin recargar'
+                );
+
+                if (shouldReload.isConfirmed) {
+                  window.location.reload();
+                }
+              }
+            } else {
+              await this.notificationService.showError(
+                response.error || 'Error desconocido durante la importación',
+                'Error de importación'
+              );
+            }
+          },
+          error: async () => {
+            this.isImporting = false;
+            this.notificationService.hideLoading();
+            await this.notificationService.errorGeneric('procesar el archivo');
+          },
+        });
+    } catch (error) {
+      this.isImporting = false;
+      this.notificationService.hideLoading();
+      await this.notificationService.errorGeneric('procesar el archivo');
+    }
+  }
+
+  // ===== GETTERS PARA EL TEMPLATE =====
+
+  get exportButtonDisabled(): boolean {
+    return this.isExporting || !this.hasDataToExport;
+  }
+
+  get importButtonDisabled(): boolean {
+    return this.isImporting;
+  }
+
+  get exportButtonText(): string {
+    if (this.isExporting) return 'Exportando...';
+    if (!this.hasDataToExport) return 'Sin datos para exportar';
+    return 'Exportar Listas';
+  }
+
+  get importButtonText(): string {
+    return this.isImporting ? 'Procesando...' : 'Importar Listas';
+  }
+
+  // ===== MÉTODOS PARA FUTURE FEATURES =====
+
+  onDesktopVersionClick(): void {
+    this.notificationService.showInfo('La versión de escritorio estará disponible próximamente.', 'Próximamente');
+  }
 }

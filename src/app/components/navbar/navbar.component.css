@@ -1,22 +1,271 @@
-.titulo{
-    color:#fff; 
-    display:inline-block;
+/* ===== ESTILOS PRINCIPALES ===== */
+
+.titulo {
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin: 0;
 }
 
-.mat-toolbar{
-    padding: 100px !important;
-    padding-left: 0 !important;
+.navbar-brand {
+  flex-grow: 1;
 }
 
-.mat-icon-button {
-    padding: 0;
-    min-width: 0;
-    width: 40px;
-    height: 40px;
-    flex-shrink: 0;
-    line-height: 40px;
-    border-radius: 50%;
-    top: 1%;
-    position: absolute;
-    right: 1%;
+.flex-spacer {
+  flex: 1 1 auto;
+}
+
+/* ===== TOOLBAR CUSTOMIZATION ===== */
+
+.mat-toolbar {
+  padding: 0 16px !important;
+  min-height: 64px;
+}
+
+.mat-toolbar-row {
+  height: 64px;
+  padding: 0;
+}
+
+/* ===== MENU TRIGGER ===== */
+
+.menu-trigger {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-trigger .mat-icon {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+/* ===== MENU STYLES ===== */
+
+.main-menu {
+  min-width: 280px;
+  max-width: 320px;
+}
+
+.menu-section-header {
+  padding: 8px 0 4px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  margin-bottom: 4px;
+}
+
+.menu-section-header:first-child {
+  padding-top: 4px;
+}
+
+.menu-footer {
+  background-color: #f5f5f5;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  margin-top: 4px;
+}
+
+/* ===== MENU ITEMS ===== */
+
+.mat-menu-item {
+  min-height: 48px;
+  line-height: 48px;
+  padding: 0 16px;
+}
+
+.mat-menu-item .mat-icon {
+  margin-right: 16px;
+  color: rgba(0, 0, 0, 0.54);
+  width: 24px;
+  height: 24px;
+  font-size: 24px;
+}
+
+.mat-menu-item:hover .mat-icon {
+  color: rgba(0, 0, 0, 0.87);
+}
+
+.mat-menu-item[disabled] {
+  opacity: 0.6;
+}
+
+.mat-menu-item[disabled] .mat-icon {
+  color: rgba(0, 0, 0, 0.26);
+}
+
+/* ===== STATUS INDICATOR ===== */
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+}
+
+.status-indicator .mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.text-success {
+  color: #4caf50 !important;
+}
+
+.text-muted {
+  color: rgba(0, 0, 0, 0.54) !important;
+}
+
+/* ===== ANIMATIONS ===== */
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== LOADING BAR ===== */
+
+.loading-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+@media (max-width: 768px) {
+  .titulo {
+    font-size: 1.2rem;
+  }
+
+  .navbar-brand img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .main-menu {
+    min-width: 250px;
+  }
+
+  .mat-toolbar {
+    padding: 0 8px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .titulo {
+    font-size: 1rem;
+  }
+
+  .navbar-brand img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .main-menu {
+    min-width: 220px;
+  }
+}
+
+/* ===== UTILITY CLASSES ===== */
+
+.d-flex {
+  display: flex;
+}
+
+.align-items-center {
+  align-items: center;
+}
+
+.justify-content-center {
+  justify-content: center;
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.me-2 {
+  margin-right: 0.5rem;
+}
+
+.me-3 {
+  margin-right: 1rem;
+}
+
+.ms-auto {
+  margin-left: auto;
+}
+
+.mt-1 {
+  margin-top: 0.25rem;
+}
+
+.px-3 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.py-2 {
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+/* ===== CUSTOM MATERIAL OVERRIDES ===== */
+
+.mat-menu-panel {
+  box-shadow:
+    0 5px 5px -3px rgba(0, 0, 0, 0.2),
+    0 8px 10px 1px rgba(0, 0, 0, 0.14),
+    0 3px 14px 2px rgba(0, 0, 0, 0.12);
+}
+
+.mat-progress-bar {
+  height: 2px;
+}
+
+.mat-progress-bar-fill::after {
+  background-color: #ff4081;
+}
+
+.mat-progress-bar-buffer {
+  background-color: rgba(255, 64, 129, 0.3);
+}
+
+/* ===== ACCESSIBILITY ===== */
+
+.mat-menu-item:focus {
+  outline: 3px solid rgba(63, 81, 181, 0.5);
+  outline-offset: -3px;
+}
+
+.menu-trigger:focus {
+  outline: 3px solid rgba(255, 255, 255, 0.5);
+  outline-offset: -3px;
+}
+
+/* ===== DARK MODE SUPPORT (para futuro) ===== */
+
+@media (prefers-color-scheme: dark) {
+  .menu-footer {
+    background-color: #424242;
+    border-top-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .menu-section-header {
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .text-muted {
+    color: rgba(255, 255, 255, 0.54) !important;
+  }
 }

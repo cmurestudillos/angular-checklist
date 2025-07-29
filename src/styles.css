@@ -1,19 +1,24 @@
-/* Estilos de la aplicacion */
+/* Base original intacta */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+}
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
-
+/* ===== WRAPPER ORIGINAL ===== */
 #wrapper {
-    overflow-x: hidden;
- }
+  overflow-x: hidden;
+}
 
+/* ===== SIDEBAR ORIGINAL ===== */
 #sidebar-wrapper {
   min-height: 100vh;
   margin-left: -15rem;
-  -webkit-transition: margin .25s ease-out;
-  -moz-transition: margin .25s ease-out;
-  -o-transition: margin .25s ease-out;
-  transition: margin .25s ease-out;
+  -webkit-transition: margin 0.25s ease-out;
+  -moz-transition: margin 0.25s ease-out;
+  -o-transition: margin 0.25s ease-out;
+  transition: margin 0.25s ease-out;
 }
 
 #sidebar-wrapper .sidebar-heading {
@@ -33,6 +38,7 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   margin-left: 0;
 }
 
+/* Responsive del sidebar original */
 @media (min-width: 768px) {
   #sidebar-wrapper {
     margin-left: 0;
@@ -46,4 +52,187 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   #wrapper.toggled #sidebar-wrapper {
     margin-left: -15rem;
   }
+}
+
+/* ===== MEJORAS RESPONSIVE ADICIONALES ===== */
+
+/* Mobile: Sidebar se convierte en horizontal */
+@media (max-width: 767px) {
+  #wrapper {
+    flex-direction: column;
+    display: flex;
+  }
+
+  #sidebar-wrapper {
+    min-height: auto;
+    height: auto;
+    width: 100%;
+    margin-left: 0;
+    position: relative;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  #sidebar-wrapper .list-group {
+    width: auto;
+    display: flex;
+    flex-direction: row;
+    min-width: max-content;
+    padding: 10px;
+  }
+
+  #sidebar-wrapper .list-group .list-group-item {
+    white-space: nowrap;
+    min-width: 120px;
+    text-align: center;
+    margin-right: 8px;
+    border-radius: 20px;
+  }
+
+  #page-content-wrapper {
+    min-width: 100%;
+    flex: 1;
+  }
+}
+
+/* Tablet ajustes */
+@media (max-width: 1024px) and (min-width: 768px) {
+  #sidebar-wrapper .list-group {
+    width: 12rem;
+  }
+
+  #sidebar-wrapper {
+    margin-left: -12rem;
+  }
+
+  #wrapper.toggled #sidebar-wrapper {
+    margin-left: -12rem;
+  }
+}
+
+/* ===== BOTÓN TOGGLE PARA MÓVIL ===== */
+@media (max-width: 767px) {
+  .mobile-sidebar-toggle {
+    display: block;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-sidebar-toggle {
+    display: none;
+  }
+}
+
+/* ===== UTILIDADES RESPONSIVE ===== */
+
+/* Ocultar en móvil */
+@media (max-width: 767px) {
+  .d-mobile-none {
+    display: none !important;
+  }
+}
+
+/* Ocultar en tablet */
+@media (max-width: 1024px) and (min-width: 768px) {
+  .d-tablet-none {
+    display: none !important;
+  }
+}
+
+/* Ocultar en desktop */
+@media (min-width: 1025px) {
+  .d-desktop-none {
+    display: none !important;
+  }
+}
+
+/* ===== CLASES BÁSICAS SIN CAMBIAR NADA ===== */
+.clearfix {
+  clear: both;
+}
+.full-width {
+  width: 100%;
+}
+.w-100 {
+  width: 100%;
+}
+
+/* Flexbox básico */
+.d-flex {
+  display: flex;
+}
+.align-items-center {
+  align-items: center;
+}
+.justify-content-between {
+  justify-content: space-between;
+}
+.justify-content-center {
+  justify-content: center;
+}
+
+/* Margins básicos */
+.m-0 {
+  margin: 0;
+}
+.m-2 {
+  margin: 8px;
+}
+.mt-2 {
+  margin-top: 8px;
+}
+.mb-2 {
+  margin-bottom: 8px;
+}
+.me-2 {
+  margin-right: 8px;
+}
+.me-3 {
+  margin-right: 16px;
+}
+.ms-auto {
+  margin-left: auto;
+}
+
+/* Padding básico */
+.p-2 {
+  padding: 8px;
+}
+.px-3 {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+.py-2 {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* Text utilities */
+.text-center {
+  text-align: center;
+}
+.text-muted {
+  color: #6c757d;
+}
+
+/* ===== SCROLL SUAVE ===== */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ===== FOCUS VISIBLE ===== */
+*:focus-visible {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
 }

@@ -1,9 +1,474 @@
-<p><mat-form-field>
-    <mat-label>Top gap</mat-label>
-    <input matInput type="number" formControlName="top">
-  </mat-form-field></p>
-<p><mat-form-field>
-    <mat-label>Bottom gap</mat-label>
-    <input matInput type="number" formControlName="bottom">
-  </mat-form-field></p>
-<p><button mat-button (click)="sidenav.toggle()">Toggle</button></p>
+<div class="sidenav-container">
+  <!-- Header del panel -->
+  <div class="sidenav-header">
+    <h3 class="sidenav-title">
+      <mat-icon class="me-2">settings</mat-icon>
+      Panel de Control
+    </h3>
+  </div>
+
+  <!-- Navegación por pestañas -->
+  <mat-tab-group
+    [selectedIndex]="activeSectionIndexValue"
+    (selectedIndexChange)="onTabIndexChange($event)"
+    class="sidenav-tabs"
+    animationDuration="300ms">
+    <!-- PESTAÑA: ESTADÍSTICAS -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">analytics</mat-icon>
+        <span class="tab-text">Estadísticas</span>
+      </ng-template>
+
+      <div class="tab-content">
+        <!-- Resumen general -->
+        <div class="stats-summary" *ngIf="hasData; else noDataTemplate">
+          <div class="summary-card primary">
+            <div class="card-icon">
+              <mat-icon>list_alt</mat-icon>
+            </div>
+            <div class="card-content">
+              <span class="card-number">{{ currentStats.totalListas }}</span>
+              <span class="card-label">Listas</span>
+            </div>
+          </div>
+
+          <div class="summary-card success">
+            <div class="card-icon">
+              <mat-icon>task_alt</mat-icon>
+            </div>
+            <div class="card-content">
+              <span class="card-number">{{ currentStats.totalTareas }}</span>
+              <span class="card-label">Tareas</span>
+            </div>
+          </div>
+
+          <div class="summary-card info">
+            <div class="card-icon">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+            <div class="card-content">
+              <span class="card-number">{{ currentStats.tareasCompletadas }}</span>
+              <span class="card-label">Completadas</span>
+            </div>
+          </div>
+
+          <div class="summary-card warning">
+            <div class="card-icon">
+              <mat-icon>pending</mat-icon>
+            </div>
+            <div class="card-content">
+              <span class="card-number">{{ currentStats.tareasActivas }}</span>
+              <span class="card-label">Pendientes</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progreso de completación -->
+        <div class="progress-section" *ngIf="hasData">
+          <h4 class="section-title">
+            <mat-icon>trending_up</mat-icon>
+            Progreso General
+          </h4>
+
+          <div class="progress-container">
+            <div class="progress-info">
+              <span class="progress-percentage">{{ completionPercentage }}%</span>
+              <span class="progress-subtitle">Completado</span>
+            </div>
+
+            <mat-progress-bar mode="determinate" [value]="completionPercentage" class="custom-progress-bar">
+            </mat-progress-bar>
+
+            <div class="progress-details">
+              <small class="text-muted">
+                {{ currentStats.tareasCompletadas }} de {{ currentStats.totalTareas }} tareas completadas
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detalles adicionales -->
+        <div class="details-section" *ngIf="hasData">
+          <h4 class="section-title">
+            <mat-icon>info</mat-icon>
+            Detalles
+          </h4>
+
+          <div class="detail-item">
+            <mat-icon class="detail-icon">calculate</mat-icon>
+            <div class="detail-content">
+              <span class="detail-label">Promedio por lista</span>
+              <span class="detail-value">{{ averageTasksPerList }} tareas</span>
+            </div>
+          </div>
+
+          <div class="detail-item" *ngIf="currentStats.listaConMasTareas">
+            <mat-icon class="detail-icon">star</mat-icon>
+            <div class="detail-content">
+              <span class="detail-label">Lista más activa</span>
+              <span class="detail-value">{{ currentStats.listaConMasTareas }}</span>
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <mat-icon class="detail-icon">schedule</mat-icon>
+            <div class="detail-content">
+              <span class="detail-label">Última actividad</span>
+              <span class="detail-value">{{ lastActivityFormatted }}</span>
+            </div>
+          </div>
+
+          <div class="detail-item">
+            <mat-icon class="detail-icon">timer</mat-icon>
+            <div class="detail-content">
+              <span class="detail-label">Tiempo de uso</span>
+              <span class="detail-value">{{ usageTimeFormatted }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acciones de estadísticas -->
+        <div class="actions-section">
+          <button mat-stroked-button color="primary" (click)="refreshStats()" class="action-button">
+            <mat-icon>refresh</mat-icon>
+            Actualizar
+          </button>
+
+          <button mat-stroked-button color="warn" (click)="resetStats()" class="action-button">
+            <mat-icon>delete_sweep</mat-icon>
+            Reiniciar
+          </button>
+        </div>
+
+        <!-- Template cuando no hay datos -->
+        <ng-template #noDataTemplate>
+          <div class="no-data-message">
+            <mat-icon class="no-data-icon">analytics</mat-icon>
+            <h4>Sin estadísticas</h4>
+            <p>Crea algunas listas y tareas para ver estadísticas aquí</p>
+          </div>
+        </ng-template>
+      </div>
+    </mat-tab>
+
+    <!-- PESTAÑA: APARIENCIA -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">palette</mat-icon>
+        <span class="tab-text">Apariencia</span>
+      </ng-template>
+
+      <div class="tab-content">
+        <form [formGroup]="appearanceForm" class="settings-form">
+          <!-- Tema -->
+          <div class="setting-group">
+            <h4 class="setting-title">
+              <mat-icon>brightness_6</mat-icon>
+              Tema
+            </h4>
+
+            <mat-radio-group formControlName="theme" class="theme-options">
+              <mat-radio-button value="light" class="theme-option">
+                <div class="option-content">
+                  <mat-icon>{{ getThemeIcon('light') }}</mat-icon>
+                  <span>Claro</span>
+                </div>
+              </mat-radio-button>
+
+              <mat-radio-button value="dark" class="theme-option">
+                <div class="option-content">
+                  <mat-icon>{{ getThemeIcon('dark') }}</mat-icon>
+                  <span>Oscuro</span>
+                </div>
+              </mat-radio-button>
+
+              <mat-radio-button value="auto" class="theme-option">
+                <div class="option-content">
+                  <mat-icon>{{ getThemeIcon('auto') }}</mat-icon>
+                  <span>Automático</span>
+                </div>
+              </mat-radio-button>
+            </mat-radio-group>
+          </div>
+
+          <!-- Vista por defecto -->
+          <div class="setting-group">
+            <h4 class="setting-title">
+              <mat-icon>view_list</mat-icon>
+              Vista por defecto
+            </h4>
+
+            <mat-radio-group formControlName="defaultView" class="view-options">
+              <mat-radio-button value="list" class="view-option">
+                <div class="option-content">
+                  <mat-icon>{{ getViewIcon('list') }}</mat-icon>
+                  <span>Lista</span>
+                </div>
+              </mat-radio-button>
+
+              <mat-radio-button value="grid" class="view-option">
+                <div class="option-content">
+                  <mat-icon>{{ getViewIcon('grid') }}</mat-icon>
+                  <span>Cuadrícula</span>
+                </div>
+              </mat-radio-button>
+            </mat-radio-group>
+          </div>
+
+          <!-- Opciones de interfaz -->
+          <div class="setting-group">
+            <h4 class="setting-title">
+              <mat-icon>tune</mat-icon>
+              Interfaz
+            </h4>
+
+            <div class="toggle-options">
+              <mat-slide-toggle formControlName="compactMode" class="setting-toggle">
+                <div class="toggle-content">
+                  <mat-icon>compress</mat-icon>
+                  <div class="toggle-text">
+                    <span class="toggle-label">Modo compacto</span>
+                    <small class="toggle-description">Reduce el espaciado entre elementos</small>
+                  </div>
+                </div>
+              </mat-slide-toggle>
+
+              <mat-slide-toggle formControlName="animationsEnabled" class="setting-toggle">
+                <div class="toggle-content">
+                  <mat-icon>animation</mat-icon>
+                  <div class="toggle-text">
+                    <span class="toggle-label">Animaciones</span>
+                    <small class="toggle-description">Habilita transiciones suaves</small>
+                  </div>
+                </div>
+              </mat-slide-toggle>
+            </div>
+          </div>
+        </form>
+      </div>
+    </mat-tab>
+
+    <!-- PESTAÑA: COMPORTAMIENTO -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">psychology</mat-icon>
+        <span class="tab-text">Comportamiento</span>
+      </ng-template>
+
+      <div class="tab-content">
+        <form [formGroup]="behaviorForm" class="settings-form">
+          <!-- Gestión de tareas -->
+          <div class="setting-group">
+            <h4 class="setting-title">
+              <mat-icon>task</mat-icon>
+              Gestión de Tareas
+            </h4>
+
+            <div class="toggle-options">
+              <mat-slide-toggle formControlName="showCompleted" class="setting-toggle">
+                <div class="toggle-content">
+                  <mat-icon>visibility</mat-icon>
+                  <div class="toggle-text">
+                    <span class="toggle-label">Mostrar completadas</span>
+                    <small class="toggle-description">Mantener visibles las tareas completadas</small>
+                  </div>
+                </div>
+              </mat-slide-toggle>
+
+              <mat-slide-toggle formControlName="autoSave" class="setting-toggle">
+                <div class="toggle-content">
+                  <mat-icon>save</mat-icon>
+                  <div class="toggle-text">
+                    <span class="toggle-label">Guardado automático</span>
+                    <small class="toggle-description">Guarda cambios inmediatamente</small>
+                  </div>
+                </div>
+              </mat-slide-toggle>
+            </div>
+          </div>
+
+          <!-- Ordenamiento -->
+          <div class="setting-group">
+            <h4 class="setting-title">
+              <mat-icon>sort</mat-icon>
+              Ordenamiento
+            </h4>
+
+            <mat-radio-group formControlName="taskSorting" class="sorting-options">
+              <mat-radio-button value="manual" class="sorting-option">
+                <div class="option-content">
+                  <mat-icon>{{ getSortingIcon('manual') }}</mat-icon>
+                  <div class="option-text">
+                    <span>Manual</span>
+                    <small>Arrastra para reordenar</small>
+                  </div>
+                </div>
+              </mat-radio-button>
+
+              <mat-radio-button value="alphabetical" class="sorting-option">
+                <div class="option-content">
+                  <mat-icon>{{ getSortingIcon('alphabetical') }}</mat-icon>
+                  <div class="option-text">
+                    <span>Alfabético</span>
+                    <small>Orden A-Z</small>
+                  </div>
+                </div>
+              </mat-radio-button>
+
+              <mat-radio-button value="dateCreated" class="sorting-option">
+                <div class="option-content">
+                  <mat-icon>{{ getSortingIcon('dateCreated') }}</mat-icon>
+                  <div class="option-text">
+                    <span>Fecha de creación</span>
+                    <small>Más recientes primero</small>
+                  </div>
+                </div>
+              </mat-radio-button>
+
+              <mat-radio-button value="dateModified" class="sorting-option">
+                <div class="option-content">
+                  <mat-icon>{{ getSortingIcon('dateModified') }}</mat-icon>
+                  <div class="option-text">
+                    <span>Última modificación</span>
+                    <small>Actualizadas recientemente</small>
+                  </div>
+                </div>
+              </mat-radio-button>
+            </mat-radio-group>
+          </div>
+
+          <!-- Confirmaciones y sonidos -->
+          <div class="setting-group">
+            <h4 class="setting-title">
+              <mat-icon>security</mat-icon>
+              Confirmaciones y Sonidos
+            </h4>
+
+            <div class="toggle-options">
+              <mat-slide-toggle formControlName="confirmDeletes" class="setting-toggle">
+                <div class="toggle-content">
+                  <mat-icon>help_outline</mat-icon>
+                  <div class="toggle-text">
+                    <span class="toggle-label">Confirmar eliminaciones</span>
+                    <small class="toggle-description">Pedir confirmación antes de eliminar</small>
+                  </div>
+                </div>
+              </mat-slide-toggle>
+
+              <mat-slide-toggle formControlName="soundEnabled" class="setting-toggle">
+                <div class="toggle-content">
+                  <mat-icon>volume_up</mat-icon>
+                  <div class="toggle-text">
+                    <span class="toggle-label">Sonidos</span>
+                    <small class="toggle-description">Reproducir sonidos de notificación</small>
+                  </div>
+                </div>
+              </mat-slide-toggle>
+            </div>
+          </div>
+        </form>
+      </div>
+    </mat-tab>
+
+    <!-- PESTAÑA: CONFIGURACIÓN AVANZADA -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">build</mat-icon>
+        <span class="tab-text">Avanzado</span>
+      </ng-template>
+
+      <div class="tab-content">
+        <!-- Gestión de configuración -->
+        <div class="setting-group">
+          <h4 class="setting-title">
+            <mat-icon>settings_backup_restore</mat-icon>
+            Gestión de Configuración
+          </h4>
+
+          <div class="config-actions">
+            <button mat-stroked-button color="primary" (click)="exportSettings()" class="config-button">
+              <mat-icon>download</mat-icon>
+              Exportar Configuración
+            </button>
+
+            <label for="import-settings" class="config-button-label">
+              <button mat-stroked-button color="primary" class="config-button">
+                <mat-icon>upload</mat-icon>
+                Importar Configuración
+              </button>
+            </label>
+            <input
+              id="import-settings"
+              type="file"
+              accept=".json"
+              (change)="onImportSettings($event)"
+              style="display: none" />
+
+            <button mat-stroked-button color="warn" (click)="resetSettings()" class="config-button">
+              <mat-icon>restore</mat-icon>
+              Restaurar por Defecto
+            </button>
+          </div>
+        </div>
+
+        <!-- Información del sistema -->
+        <div class="setting-group">
+          <h4 class="setting-title">
+            <mat-icon>info</mat-icon>
+            Información del Sistema
+          </h4>
+
+          <div class="system-info">
+            <div class="info-item">
+              <span class="info-label">Versión de la app:</span>
+              <span class="info-value">1.0.0</span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">Navegador:</span>
+              <span class="info-value">{{ navigatorInfo }}</span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">Almacenamiento usado:</span>
+              <span class="info-value"> {{ storageUsage | number: '1.1-1' }} KB </span>
+            </div>
+
+            <div class="info-item">
+              <span class="info-label">Última sincronización:</span>
+              <span class="info-value">{{ lastActivityFormatted }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Zona de peligro -->
+        <div class="setting-group danger-zone">
+          <h4 class="setting-title danger-title">
+            <mat-icon>warning</mat-icon>
+            Zona de Peligro
+          </h4>
+
+          <div class="danger-actions">
+            <button mat-stroked-button color="warn" (click)="resetStats()" class="danger-button">
+              <mat-icon>delete_sweep</mat-icon>
+              Borrar Estadísticas
+            </button>
+
+            <button mat-stroked-button color="warn" disabled class="danger-button">
+              <mat-icon>delete_forever</mat-icon>
+              Borrar Todos los Datos
+              <small>(Próximamente)</small>
+            </button>
+          </div>
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+
+  <!-- Loading overlay -->
+  <div class="loading-overlay" *ngIf="isLoading">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Cargando...</p>
+  </div>
+</div>

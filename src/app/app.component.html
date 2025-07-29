@@ -1,3 +1,23 @@
-<NavBarComponent></NavBarComponent>
+<!-- Estructura principal de la aplicación -->
+<mat-sidenav-container class="sidenav-container" fullscreen>
+  <!-- Panel lateral de configuración -->
+  <mat-sidenav #drawer class="settings-sidenav" mode="over" position="end" [fixedInViewport]="true">
+    <app-sidenav></app-sidenav>
+  </mat-sidenav>
 
-<router-outlet />
+  <!-- Contenido principal -->
+  <mat-sidenav-content>
+    <!-- Navbar superior -->
+    <app-navbar></app-navbar>
+
+    <!-- Botón flotante para abrir panel (opcional) -->
+    <button mat-fab class="settings-fab" (click)="drawer.toggle()" aria-label="Abrir panel de configuración">
+      <mat-icon>settings</mat-icon>
+    </button>
+
+    <!-- Contenido de las rutas -->
+    <div class="main-content">
+      <router-outlet></router-outlet>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>
