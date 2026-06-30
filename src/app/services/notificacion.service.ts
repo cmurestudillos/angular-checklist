@@ -1,7 +1,10 @@
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
 import Swal, { SweetAlertIcon, SweetAlertResult } from 'sweetalert2';
 import { NotificationConfig } from '../models/notification-config.model';
 
+/**
+ *
+ */
 @Injectable({
   providedIn: 'root',
 })
@@ -11,14 +14,19 @@ export class NotificationService {
     cancelButtonText: 'Cancelar',
   };
 
+  /**
+   *
+   */
   constructor() {}
 
-  // ===== MÉTODOS PRINCIPALES =====
+  // ===== MÃ‰TODOS PRINCIPALES =====
 
   /**
-   * Muestra una notificación de éxito
+   * Muestra una notificaciÃ³n de Ã©xito
+   * @param message
+   * @param title
    */
-  showSuccess(message: string, title: string = 'Correcto'): Promise<SweetAlertResult> {
+  public showSuccess(message: string, title: string = 'Correcto'): Promise<SweetAlertResult> {
     return this.show({
       title,
       text: message,
@@ -28,9 +36,11 @@ export class NotificationService {
   }
 
   /**
-   * Muestra una notificación de error
+   * Muestra una notificaciÃ³n de error
+   * @param message
+   * @param title
    */
-  showError(message: string, title: string = 'Error'): Promise<SweetAlertResult> {
+  public showError(message: string, title: string = 'Error'): Promise<SweetAlertResult> {
     return this.show({
       title,
       text: message,
@@ -40,9 +50,11 @@ export class NotificationService {
   }
 
   /**
-   * Muestra una notificación de advertencia
+   * Muestra una notificaciÃ³n de advertencia
+   * @param message
+   * @param title
    */
-  showWarning(message: string, title: string = 'Advertencia'): Promise<SweetAlertResult> {
+  public showWarning(message: string, title: string = 'Advertencia'): Promise<SweetAlertResult> {
     return this.show({
       title,
       text: message,
@@ -52,9 +64,11 @@ export class NotificationService {
   }
 
   /**
-   * Muestra una notificación de información
+   * Muestra una notificaciÃ³n de informaciÃ³n
+   * @param message
+   * @param title
    */
-  showInfo(message: string, title: string = 'Información'): Promise<SweetAlertResult> {
+  public showInfo(message: string, title: string = 'InformaciÃ³n'): Promise<SweetAlertResult> {
     return this.show({
       title,
       text: message,
@@ -64,12 +78,16 @@ export class NotificationService {
   }
 
   /**
-   * Muestra una notificación de confirmación
+   * Muestra una notificaciÃ³n de confirmaciÃ³n
+   * @param message
+   * @param title
+   * @param confirmText
+   * @param cancelText
    */
-  showConfirmation(
+  public showConfirmation(
     message: string,
-    title: string = '¿Estás seguro?',
-    confirmText: string = 'Sí, continuar',
+    title: string = 'Â¿EstÃ¡s seguro?',
+    confirmText: string = 'SÃ­, continuar',
     cancelText: string = 'Cancelar'
   ): Promise<SweetAlertResult> {
     return this.show({
@@ -84,9 +102,12 @@ export class NotificationService {
   }
 
   /**
-   * Muestra una notificación toast (pequeña y temporal)
+   * Muestra una notificaciÃ³n toast (pequeÃ±a y temporal)
+   * @param message
+   * @param icon
+   * @param timer
    */
-  showToast(message: string, icon: SweetAlertIcon = 'success', timer: number = 3000): Promise<SweetAlertResult> {
+  public showToast(message: string, icon: SweetAlertIcon = 'success', timer: number = 3000): Promise<SweetAlertResult> {
     return Swal.fire({
       toast: true,
       position: 'top-end',
@@ -103,9 +124,10 @@ export class NotificationService {
   }
 
   /**
-   * Muestra una notificación personalizada
+   * Muestra una notificaciÃ³n personalizada
+   * @param config
    */
-  show(config: NotificationConfig): Promise<SweetAlertResult> {
+  public show(config: NotificationConfig): Promise<SweetAlertResult> {
     const finalConfig = { ...this.defaultConfig, ...config };
 
     return Swal.fire({
@@ -118,11 +140,11 @@ export class NotificationService {
       timer: finalConfig.timer,
       toast: finalConfig.toast,
       position: finalConfig.position,
-      // Configuración adicional para mejor UX
-      allowOutsideClick: !finalConfig.showCancelButton, // No cerrar con click fuera si hay botón cancelar
+      // ConfiguraciÃ³n adicional para mejor UX
+      allowOutsideClick: !finalConfig.showCancelButton, // No cerrar con click fuera si hay botÃ³n cancelar
       allowEscapeKey: true,
       focusConfirm: true,
-      reverseButtons: true, // Botón de cancelar a la izquierda
+      reverseButtons: true, // BotÃ³n de cancelar a la izquierda
       customClass: {
         confirmButton: 'btn btn-success mx-2',
         cancelButton: 'btn btn-outline-secondary mx-2',
@@ -131,51 +153,58 @@ export class NotificationService {
     });
   }
 
-  // ===== MÉTODOS ESPECÍFICOS PARA LA APLICACIÓN =====
+  // ===== MÃ‰TODOS ESPECÃFICOS PARA LA APLICACIÃ“N =====
 
   /**
-   * Confirmación para eliminar una lista
+   * ConfirmaciÃ³n para eliminar una lista
+   * @param nombreLista
    */
-  confirmDeleteLista(nombreLista: string): Promise<SweetAlertResult> {
+  public confirmDeleteLista(nombreLista: string): Promise<SweetAlertResult> {
     return this.showConfirmation(
-      `Se eliminará la lista "${nombreLista}" y todas sus tareas. Esta acción no se puede deshacer.`,
-      '¿Eliminar lista?',
-      'Sí, eliminar',
+      `Se eliminarÃ¡ la lista "${nombreLista}" y todas sus tareas. Esta acciÃ³n no se puede deshacer.`,
+      'Â¿Eliminar lista?',
+      'SÃ­, eliminar',
       'Cancelar'
     );
   }
 
   /**
-   * Confirmación para eliminar una tarea
+   * ConfirmaciÃ³n para eliminar una tarea
    */
-  confirmDeleteTarea(): Promise<SweetAlertResult> {
+  public confirmDeleteTarea(): Promise<SweetAlertResult> {
     return this.showConfirmation(
-      'Se eliminará la tarea seleccionada. Esta acción no se puede deshacer.',
-      '¿Eliminar tarea?',
-      'Sí, eliminar',
+      'Se eliminarÃ¡ la tarea seleccionada. Esta acciÃ³n no se puede deshacer.',
+      'Â¿Eliminar tarea?',
+      'SÃ­, eliminar',
       'Cancelar'
     );
   }
 
   /**
-   * Confirmación para eliminar tareas seleccionadas
+   * ConfirmaciÃ³n para eliminar tareas seleccionadas
+   * @param cantidad
    */
-  confirmDeleteTareasSeleccionadas(cantidad: number): Promise<SweetAlertResult> {
+  public confirmDeleteTareasSeleccionadas(cantidad: number): Promise<SweetAlertResult> {
     const mensaje =
-      cantidad === 1 ? 'Se eliminará la tarea seleccionada.' : `Se eliminarán ${cantidad} tareas seleccionadas.`;
+      cantidad === 1 ? 'Se eliminarÃ¡ la tarea seleccionada.' : `Se eliminarÃ¡n ${cantidad} tareas seleccionadas.`;
 
     return this.showConfirmation(
-      `${mensaje} Esta acción no se puede deshacer.`,
-      '¿Eliminar tareas?',
-      'Sí, eliminar',
+      `${mensaje} Esta acciÃ³n no se puede deshacer.`,
+      'Â¿Eliminar tareas?',
+      'SÃ­, eliminar',
       'Cancelar'
     );
   }
 
   /**
-   * Notificación de éxito para operaciones de lista
+   * NotificaciÃ³n de Ã©xito para operaciones de lista
+   * @param operation
+   * @param nombreLista
    */
-  successListaOperation(operation: 'created' | 'updated' | 'deleted', nombreLista?: string): Promise<SweetAlertResult> {
+  public successListaOperation(
+    operation: 'created' | 'updated' | 'deleted',
+    nombreLista?: string
+  ): Promise<SweetAlertResult> {
     const messages = {
       created: 'Lista creada correctamente',
       updated: 'Lista actualizada correctamente',
@@ -188,9 +217,11 @@ export class NotificationService {
   }
 
   /**
-   * Notificación de éxito para operaciones de tarea
+   * NotificaciÃ³n de Ã©xito para operaciones de tarea
+   * @param operation
+   * @param count
    */
-  successTareaOperation(
+  public successTareaOperation(
     operation: 'created' | 'updated' | 'deleted' | 'bulk_deleted',
     count?: number
   ): Promise<SweetAlertResult> {
@@ -205,48 +236,52 @@ export class NotificationService {
   }
 
   /**
-   * Notificación de error para operaciones duplicadas
+   * NotificaciÃ³n de error para operaciones duplicadas
+   * @param type
    */
-  errorDuplicate(type: 'lista' | 'tarea'): Promise<SweetAlertResult> {
+  public errorDuplicate(type: 'lista' | 'tarea'): Promise<SweetAlertResult> {
     const message = type === 'lista' ? 'Ya existe una lista con ese nombre' : 'Ya existe una tarea con ese texto';
 
     return this.showError(message);
   }
 
   /**
-   * Notificación de error genérico
+   * NotificaciÃ³n de error genÃ©rico
+   * @param operation
    */
-  errorGeneric(operation: string): Promise<SweetAlertResult> {
-    return this.showError(`Ha ocurrido un error al ${operation}. Por favor, inténtalo de nuevo.`);
+  public errorGeneric(operation: string): Promise<SweetAlertResult> {
+    return this.showError(`Ha ocurrido un error al ${operation}. Por favor, intÃ©ntalo de nuevo.`);
   }
 
   /**
-   * Notificación de validación
+   * NotificaciÃ³n de validaciÃ³n
+   * @param message
    */
-  validationError(message: string): Promise<SweetAlertResult> {
+  public validationError(message: string): Promise<SweetAlertResult> {
     return this.showWarning(message, 'Datos incompletos');
   }
 
-  // ===== MÉTODOS UTILITARIOS =====
+  // ===== MÃ‰TODOS UTILITARIOS =====
 
   /**
-   * Cierra cualquier notificación activa
+   * Cierra cualquier notificaciÃ³n activa
    */
-  close(): void {
+  public close(): void {
     Swal.close();
   }
 
   /**
-   * Verifica si hay una notificación activa
+   * Verifica si hay una notificaciÃ³n activa
    */
-  isVisible(): boolean {
+  public isVisible(): boolean {
     return Swal.isVisible();
   }
 
   /**
    * Muestra un loading personalizado
+   * @param message
    */
-  showLoading(message: string = 'Procesando...'): void {
+  public showLoading(message: string = 'Procesando...'): void {
     Swal.fire({
       title: message,
       allowOutsideClick: false,
@@ -261,7 +296,7 @@ export class NotificationService {
   /**
    * Oculta el loading
    */
-  hideLoading(): void {
+  public hideLoading(): void {
     Swal.close();
   }
 }

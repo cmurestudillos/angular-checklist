@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, of, forkJoin } from 'rxjs';
+import { firstValueFrom, forkJoin, Observable, of } from 'rxjs';
 import { map, switchMap } from 'rxjs/operators';
 
 // Servicios
@@ -11,6 +11,9 @@ import { ImportStats } from '../models/import-stats-model';
 import { ListaCompleta } from '../models/lista-completa.model';
 import { ServiceResponse } from '../types/service-response.type';
 
+/**
+ *
+ */
 @Injectable({
   providedIn: 'root',
 })
@@ -19,6 +22,11 @@ export class ExportImportService {
   private readonly ACCEPTED_FILE_TYPES = ['.json'];
   private readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+  /**
+   *
+   * @param storageService
+   * @param notificationService
+   */
   constructor(
     private storageService: StorageService,
     private notificationService: NotificationService
@@ -29,7 +37,7 @@ export class ExportImportService {
   /**
    * Exporta todas las listas y tareas a un archivo JSON
    */
-  exportData(): Observable<ServiceResponse<string>> {
+  public exportData(): Observable<ServiceResponse<string>> {
     return this.storageService.getListas().pipe(
       switchMap(response => {
         if (!response.success || !response.data) {
@@ -76,7 +84,7 @@ export class ExportImportService {
   /**
    * Descarga los datos como archivo JSON
    */
-  downloadData(): void {
+  public downloadData(): void {
     this.exportData().subscribe({
       next: response => {
         if (response.success && response.data) {
@@ -92,6 +100,11 @@ export class ExportImportService {
     });
   }
 
+  /**
+   *
+   * @param content
+   * @param filename
+   */
   private downloadJsonFile(content: string, filename: string): void {
     const blob = new Blob([content], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -109,6 +122,9 @@ export class ExportImportService {
     URL.revokeObjectURL(url);
   }
 
+  /**
+   *
+   */
   private generateFileName(): string {
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
@@ -120,8 +136,9 @@ export class ExportImportService {
 
   /**
    * Valida que el archivo sea válido antes de procesarlo
+   * @param file
    */
-  validateFile(file: File): { valid: boolean; error?: string } {
+  public validateFile(file: File): { valid: boolean; error?: string } {
     // Validar tipo de archivo
     if (!this.ACCEPTED_FILE_TYPES.some(type => file.name.toLowerCase().endsWith(type))) {
       return {
@@ -143,8 +160,9 @@ export class ExportImportService {
 
   /**
    * Procesa un archivo de importación
+   * @param file
    */
-  processImportFile(file: File): Observable<ServiceResponse<ImportStats>> {
+  public processImportFile(file: File): Observable<ServiceResponse<ImportStats>> {
     return new Observable(observer => {
       const validation = this.validateFile(file);
       if (!validation.valid) {
@@ -169,7 +187,7 @@ export class ExportImportService {
             error: error => observer.error(error),
             complete: () => observer.complete(),
           });
-        } catch (error) {
+        } catch {
           observer.next({
             success: false,
             error: 'El archivo no tiene un formato JSON válido',
@@ -194,6 +212,7 @@ export class ExportImportService {
 
   /**
    * Importa los datos validando la estructura
+   * @param data
    */
   private importData(data: any): Observable<ServiceResponse<ImportStats>> {
     return new Observable(observer => {
@@ -229,7 +248,7 @@ export class ExportImportService {
           });
           observer.complete();
         })
-        .catch(error => {
+        .catch(() => {
           observer.next({
             success: false,
             error: 'Error durante la importación',
@@ -240,6 +259,10 @@ export class ExportImportService {
     });
   }
 
+  /**
+   *
+   * @param data
+   */
   private validateImportData(data: any): { valid: boolean; error?: string } {
     if (!data || typeof data !== 'object') {
       return { valid: false, error: 'Formato de datos inválido' };
@@ -270,10 +293,15 @@ export class ExportImportService {
     return { valid: true };
   }
 
+  /**
+   *
+   * @param listaCompleta
+   * @param stats
+   */
   private async importSingleLista(listaCompleta: ListaCompleta, stats: ImportStats): Promise<void> {
     try {
       // Intentar crear la lista
-      const listaResponse = await this.storageService.crearLista(listaCompleta.title).toPromise();
+      const listaResponse = await firstValueFrom(this.storageService.crearLista(listaCompleta.title));
 
       if (listaResponse?.success && listaResponse.data) {
         stats.listasCreadas++;
@@ -281,7 +309,9 @@ export class ExportImportService {
         // Importar tareas de esta lista
         for (const tarea of listaCompleta.tareas) {
           try {
-            const tareaResponse = await this.storageService.crearTarea(listaResponse.data.id, tarea.tarea).toPromise();
+            const tareaResponse = await firstValueFrom(
+              this.storageService.crearTarea(listaResponse.data.id, tarea.tarea)
+            );
 
             if (tareaResponse?.success) {
               stats.tareasImportadas++;
@@ -303,8 +333,9 @@ export class ExportImportService {
 
   /**
    * Muestra el resultado de la importación al usuario
+   * @param stats
    */
-  showImportResults(stats: ImportStats): void {
+  public showImportResults(stats: ImportStats): void {
     const messages = [];
 
     if (stats.listasCreadas > 0) {
@@ -341,7 +372,7 @@ export class ExportImportService {
   /**
    * Verifica si hay datos para exportar
    */
-  hasDataToExport(): Observable<boolean> {
+  public hasDataToExport(): Observable<boolean> {
     return this.storageService
       .getListas()
       .pipe(map(response => (response.success && response.data ? response.data.length > 0 : false)));

@@ -1,10 +1,13 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+﻿import { Injectable } from '@angular/core';
+import { BehaviorSubject } from 'rxjs';
 // Importar modelos necesarios
 import { AppSettings } from '../models/app-settings.model';
 import { AppStats } from '../models/app-stats.model';
 import { UserPreferences } from '../models/user-preferences.model';
 
+/**
+ *
+ */
 @Injectable({
   providedIn: 'root',
 })
@@ -13,7 +16,7 @@ export class SettingsService {
 
   // Configuración por defecto
   private readonly defaultSettings: AppSettings = {
-    theme: 'auto',
+    theme: 'light',
     compactMode: false,
     showCompleted: true,
     autoSave: true,
@@ -32,6 +35,9 @@ export class SettingsService {
   public settings$ = this.settingsSubject.asObservable();
   public stats$ = this.statsSubject.asObservable();
 
+  /**
+   *
+   */
   constructor() {
     this.loadSettings();
     this.startStatsTracking();
@@ -42,14 +48,16 @@ export class SettingsService {
   /**
    * Obtiene la configuración actual
    */
-  getSettings(): AppSettings {
+  public getSettings(): AppSettings {
     return this.settingsSubject.value;
   }
 
   /**
    * Actualiza una configuración específica
+   * @param key
+   * @param value
    */
-  updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]): void {
+  public updateSetting<K extends keyof AppSettings>(key: K, value: AppSettings[K]): void {
     const currentSettings = this.settingsSubject.value;
     const newSettings = { ...currentSettings, [key]: value };
 
@@ -60,8 +68,9 @@ export class SettingsService {
 
   /**
    * Actualiza múltiples configuraciones
+   * @param partialSettings
    */
-  updateSettings(partialSettings: Partial<AppSettings>): void {
+  public updateSettings(partialSettings: Partial<AppSettings>): void {
     const currentSettings = this.settingsSubject.value;
     const newSettings = { ...currentSettings, ...partialSettings };
 
@@ -73,7 +82,7 @@ export class SettingsService {
   /**
    * Restaura configuración por defecto
    */
-  resetToDefaults(): void {
+  public resetToDefaults(): void {
     this.settingsSubject.next(this.defaultSettings);
     this.saveSettings(this.defaultSettings);
     this.applySettings(this.defaultSettings);
@@ -84,14 +93,14 @@ export class SettingsService {
   /**
    * Obtiene las estadísticas actuales
    */
-  getStats(): AppStats {
+  public getStats(): AppStats {
     return this.statsSubject.value;
   }
 
   /**
    * Actualiza las estadísticas
    */
-  updateStats(): void {
+  public updateStats(): void {
     const stats = this.calculateStats();
     this.statsSubject.next(stats);
     this.saveStats(stats);
@@ -100,7 +109,7 @@ export class SettingsService {
   /**
    * Registra actividad del usuario
    */
-  trackActivity(): void {
+  public trackActivity(): void {
     const currentStats = this.statsSubject.value;
     const updatedStats = {
       ...currentStats,
@@ -114,6 +123,9 @@ export class SettingsService {
 
   // ===== MÉTODOS PRIVADOS =====
 
+  /**
+   *
+   */
   private loadSettings(): void {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
@@ -130,6 +142,10 @@ export class SettingsService {
     }
   }
 
+  /**
+   *
+   * @param settings
+   */
   private saveSettings(settings: AppSettings): void {
     try {
       const currentPreferences = this.getCurrentPreferences();
@@ -145,6 +161,10 @@ export class SettingsService {
     }
   }
 
+  /**
+   *
+   * @param stats
+   */
   private saveStats(stats: AppStats): void {
     try {
       const currentPreferences = this.getCurrentPreferences();
@@ -160,6 +180,9 @@ export class SettingsService {
     }
   }
 
+  /**
+   *
+   */
   private getCurrentPreferences(): UserPreferences {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
@@ -177,6 +200,10 @@ export class SettingsService {
     };
   }
 
+  /**
+   *
+   * @param settings
+   */
   private applySettings(settings: AppSettings): void {
     // Aplicar tema
     this.applyTheme(settings.theme);
@@ -188,22 +215,40 @@ export class SettingsService {
     this.applyAnimations(settings.animationsEnabled);
   }
 
+  /**
+   *
+   * @param theme
+   */
+  private systemThemeListener: (() => void) | null = null;
+
   private applyTheme(theme: 'light' | 'dark' | 'auto'): void {
     const body = document.body;
-
-    // Remover clases de tema anteriores
     body.classList.remove('theme-light', 'theme-dark', 'theme-auto');
 
+    if (this.systemThemeListener) {
+      window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', this.systemThemeListener);
+      this.systemThemeListener = null;
+    }
+
     if (theme === 'auto') {
-      // Usar preferencia del sistema
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      body.classList.add(prefersDark ? 'theme-dark' : 'theme-light');
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const applySystemTheme = (): void => {
+        body.classList.remove('theme-light', 'theme-dark');
+        body.classList.add(mediaQuery.matches ? 'theme-dark' : 'theme-light');
+      };
+      applySystemTheme();
       body.classList.add('theme-auto');
+      this.systemThemeListener = applySystemTheme;
+      mediaQuery.addEventListener('change', applySystemTheme);
     } else {
       body.classList.add(`theme-${theme}`);
     }
   }
 
+  /**
+   *
+   * @param compact
+   */
   private applyCompactMode(compact: boolean): void {
     const body = document.body;
     if (compact) {
@@ -213,6 +258,10 @@ export class SettingsService {
     }
   }
 
+  /**
+   *
+   * @param enabled
+   */
   private applyAnimations(enabled: boolean): void {
     const body = document.body;
     if (enabled) {
@@ -222,6 +271,9 @@ export class SettingsService {
     }
   }
 
+  /**
+   *
+   */
   private calculateStats(): AppStats {
     try {
       // Obtener datos del localStorage
@@ -247,6 +299,9 @@ export class SettingsService {
     }
   }
 
+  /**
+   *
+   */
   private countListas(): number {
     try {
       const metaData = localStorage.getItem('checklist_listas_meta');
@@ -260,6 +315,9 @@ export class SettingsService {
     }
   }
 
+  /**
+   *
+   */
   private countTareas(): { totalTareas: number; tareasCompletadas: number } {
     let totalTareas = 0;
     let tareasCompletadas = 0;
@@ -286,6 +344,9 @@ export class SettingsService {
     return { totalTareas, tareasCompletadas };
   }
 
+  /**
+   *
+   */
   private getListaWithMostTasks(): string | null {
     let maxTareas = 0;
     let listaConMasTareas: string | null = null;
@@ -313,6 +374,9 @@ export class SettingsService {
     return listaConMasTareas;
   }
 
+  /**
+   *
+   */
   private getEmptyStats(): AppStats {
     return {
       totalListas: 0,
@@ -326,6 +390,9 @@ export class SettingsService {
     };
   }
 
+  /**
+   *
+   */
   private startStatsTracking(): void {
     // Actualizar estadísticas cada 30 segundos
     setInterval(() => {
@@ -348,15 +415,16 @@ export class SettingsService {
   /**
    * Exporta la configuración actual
    */
-  exportSettings(): string {
+  public exportSettings(): string {
     const preferences = this.getCurrentPreferences();
     return JSON.stringify(preferences, null, 2);
   }
 
   /**
    * Importa configuración desde JSON
+   * @param settingsJson
    */
-  importSettings(settingsJson: string): boolean {
+  public importSettings(settingsJson: string): boolean {
     try {
       const preferences: UserPreferences = JSON.parse(settingsJson);
 
@@ -376,7 +444,7 @@ export class SettingsService {
   /**
    * Obtiene información del dispositivo para estadísticas
    */
-  getDeviceInfo(): { platform: string; userAgent: string; screenSize: string } {
+  public getDeviceInfo(): { platform: string; userAgent: string; screenSize: string } {
     return {
       platform: navigator.platform || 'Unknown',
       userAgent: navigator.userAgent || 'Unknown',

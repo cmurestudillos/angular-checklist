@@ -1,10 +1,19 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
-import { CdkDragDrop } from '@angular/cdk/drag-drop';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { Subject, takeUntil } from 'rxjs';
+import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
 
 // Servicios
 import { StorageService } from '../../services/storage.service';
 import { NotificationService } from '../../services/notificacion.service';
+
+// Enums
+import { StorageKeys } from '../../enums/storage-keys.enum';
 
 // Modelos
 import { DrawerState } from '../../models/drawer-state.model';
@@ -14,148 +23,86 @@ import { SelectionState } from '../../models/selection-state.model';
 import { Tarea } from '../../models/tarea.model';
 import { TaskEditState } from '../../models/task-edit-state.model';
 
+/**
+ *
+ */
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  standalone: true,
+  imports: [
+    FormsModule,
+    DragDropModule,
+    MatButtonModule,
+    MatCheckboxModule,
+    MatIconModule,
+    MatInputModule,
+    MatMenuModule,
+  ],
 })
 export class HomeComponent implements OnInit, OnDestroy {
-  // ===== ESTADO DE LA APLICACIÓN =====
+  private storageService = inject(StorageService);
+  private notificationService = inject(NotificationService);
+  private cdr = inject(ChangeDetectorRef);
 
-  // Estado de listas
-  listas: Lista[] = [];
-  listaActual: ListaCompleta | null = null;
+  public listas: Lista[] = [];
+  public listaActual: ListaCompleta | null = null;
 
-  // Estado de formularios
-  nuevoTituloLista = '';
-  nuevoTextoTarea = '';
+  public nuevoTituloLista = '';
+  public nuevoTextoTarea = '';
 
-  // Estado de UI
-  drawerState: DrawerState = { opened: false, mode: 'create' };
-  taskEditState: TaskEditState = { isEditing: false };
-  selectionState: SelectionState = { allSelected: false, hasSelected: false, selectedCount: 0 };
+  public drawerState: DrawerState = { opened: false, mode: 'create' };
+  public taskEditState: TaskEditState = { isEditing: false };
+  public selectionState: SelectionState = { allSelected: false, hasSelected: false, selectedCount: 0 };
 
-  // Control de destrucción para suscripciones
   private destroy$ = new Subject<void>();
-
-  constructor(
-    private storageService: StorageService,
-    private notificationService: NotificationService,
-    private cdr: ChangeDetectorRef
-  ) {}
 
   // ===== LIFECYCLE HOOKS =====
 
-  ngOnInit(): void {
-    console.log('🚀 HomeComponent inicializando...');
-
-    // Verificar servicios
-    this.checkServices();
-
-    // Cargar listas existentes
+  /**
+   *
+   */
+  public ngOnInit(): void {
     this.loadListas();
-
-    // Suscribirse a cambios de listas
     this.subscribeToListasChanges();
-
-    // Método de debugging (remover en producción)
-    setTimeout(() => {
-      this.debugState();
-    }, 1000);
   }
 
-  ngOnDestroy(): void {
+  /**
+   *
+   */
+  public ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  // ===== MÉTODOS PRIVADOS DE INICIALIZACIÓN =====
-
-  private checkServices(): void {
-    console.log('🔍 Verificando servicios...');
-
-    console.log('StorageService:', this.storageService ? '✅' : '❌');
-    console.log('NotificationService:', this.notificationService ? '✅' : '❌');
-
-    if (this.storageService) {
-      console.log('StorageService methods:');
-      console.log('- crearLista:', typeof this.storageService.crearLista);
-      console.log('- getListas:', typeof this.storageService.getListas);
-    }
-  }
-
-  private loadListas(): void {
-    console.log('🔄 Cargando listas...');
-
-    this.storageService
-      .getListas()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: response => {
-          if (response.success && response.data) {
-            console.log('✅ Listas cargadas:', response.data);
-            this.listas = response.data;
-            this.cdr.markForCheck();
-          } else {
-            console.log('❌ Error cargando listas:', response.error);
-          }
-        },
-        error: error => {
-          console.error('❌ Error en loadListas:', error);
-          this.notificationService.errorGeneric('cargar las listas');
-        },
-      });
-  }
-
-  private subscribeToListasChanges(): void {
-    this.storageService.listas$.pipe(takeUntil(this.destroy$)).subscribe(listas => {
-      this.listas = listas;
-
-      // Si estamos viendo una lista que fue eliminada, limpiar la vista
-      if (this.listaActual && !listas.find(l => l.id === this.listaActual!.id)) {
-        this.listaActual = null;
-      }
-
-      this.cdr.markForCheck();
-    });
-  }
-
   // ===== GESTIÓN DE LISTAS =====
 
-  abrirFormularioNuevaLista(): void {
-    console.log('🚀 Abriendo formulario nueva lista...');
-
+  /**
+   *
+   */
+  public abrirFormularioNuevaLista(): void {
     this.drawerState = { opened: true, mode: 'create' };
     this.nuevoTituloLista = '';
     this.listaActual = null;
-
-    console.log('Estado actualizado:', {
-      drawerState: this.drawerState,
-      nuevoTituloLista: this.nuevoTituloLista,
-      modoFormulario: this.modoFormulario,
-    });
-
     this.cdr.markForCheck();
 
-    // Enfocar el input después de que se abra el modal
     setTimeout(() => {
       const input = document.querySelector('input[placeholder*="nombre de la lista"]') as HTMLInputElement;
       if (input) {
         input.focus();
-        console.log('✅ Input enfocado');
-      } else {
-        console.log('❌ Input no encontrado');
       }
     }, 100);
   }
 
-  abrirFormularioEditarLista(lista: Lista): void {
-    console.log('🚀 Abriendo formulario editar lista:', lista);
-
+  /**
+   *
+   * @param lista
+   */
+  public abrirFormularioEditarLista(lista: Lista): void {
     this.drawerState = { opened: true, mode: 'edit' };
     this.nuevoTituloLista = lista.title;
-
     this.cdr.markForCheck();
 
     setTimeout(() => {
@@ -167,69 +114,49 @@ export class HomeComponent implements OnInit, OnDestroy {
     }, 100);
   }
 
-  cerrarDrawer(): void {
-    console.log('🚪 Cerrando drawer...');
-
+  /**
+   *
+   */
+  public cerrarDrawer(): void {
     this.drawerState = { opened: false, mode: 'create' };
     this.nuevoTituloLista = '';
-
     this.cdr.markForCheck();
   }
 
-  async crearLista(): Promise<void> {
-    console.log('🚀 Iniciando creación de lista...');
-    console.log('Título ingresado:', `"${this.nuevoTituloLista}"`);
-
-    // Validación mejorada
+  /**
+   *
+   */
+  public async crearLista(): Promise<void> {
     if (!this.nuevoTituloLista || !this.nuevoTituloLista.trim()) {
-      console.log('❌ Validación fallida: título vacío');
       await this.notificationService.validationError('El nombre de la lista no puede estar vacío');
       return;
     }
 
     const titulo = this.nuevoTituloLista.trim();
-    console.log('Título procesado:', `"${titulo}"`);
 
-    try {
-      console.log('📡 Llamando a storageService.crearLista...');
-
-      this.storageService
-        .crearLista(titulo)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: async response => {
-            console.log('📨 Respuesta recibida:', response);
-
-            if (response.success && response.data) {
-              console.log('✅ Lista creada exitosamente:', response.data);
-
-              // Mostrar notificación de éxito
-              await this.notificationService.successListaOperation('created', response.data.title);
-
-              // Cerrar el modal
-              this.cerrarDrawer();
-
-              // Actualizar la lista de listas
-              this.loadListas();
-
-              console.log('✅ Proceso completado exitosamente');
-            } else {
-              console.log('❌ Error en la respuesta:', response.error);
-              await this.notificationService.errorDuplicate('lista');
-            }
-          },
-          error: async error => {
-            console.error('❌ Error en la suscripción:', error);
-            await this.notificationService.errorGeneric('crear la lista');
-          },
-        });
-    } catch (error) {
-      console.error('❌ Error inesperado:', error);
-      await this.notificationService.errorGeneric('crear la lista');
-    }
+    this.storageService
+      .crearLista(titulo)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: async response => {
+          if (response.success && response.data) {
+            await this.notificationService.successListaOperation('created', response.data.title);
+            this.cerrarDrawer();
+            this.loadListas();
+          } else {
+            await this.notificationService.errorDuplicate('lista');
+          }
+        },
+        error: async () => {
+          await this.notificationService.errorGeneric('crear la lista');
+        },
+      });
   }
 
-  async actualizarLista(): Promise<void> {
+  /**
+   *
+   */
+  public async actualizarLista(): Promise<void> {
     if (!this.listaActual || !this.nuevoTituloLista.trim()) {
       await this.notificationService.validationError('El nombre de la lista no puede estar vacío');
       return;
@@ -244,7 +171,6 @@ export class HomeComponent implements OnInit, OnDestroy {
             await this.notificationService.successListaOperation('updated', response.data.title);
             this.cerrarDrawer();
 
-            // Actualizar la lista actual
             if (this.listaActual) {
               this.listaActual.title = response.data.title;
               this.cdr.markForCheck();
@@ -257,7 +183,11 @@ export class HomeComponent implements OnInit, OnDestroy {
       });
   }
 
-  async eliminarLista(lista: Lista): Promise<void> {
+  /**
+   *
+   * @param lista
+   */
+  public async eliminarLista(lista: Lista): Promise<void> {
     const result = await this.notificationService.confirmDeleteLista(lista.title);
 
     if (result.isConfirmed) {
@@ -269,7 +199,6 @@ export class HomeComponent implements OnInit, OnDestroy {
             if (response.success) {
               await this.notificationService.successListaOperation('deleted');
 
-              // Si era la lista actual, limpiar la vista
               if (this.listaActual?.id === lista.id) {
                 this.listaActual = null;
                 this.cdr.markForCheck();
@@ -281,9 +210,11 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
-  seleccionarLista(lista: Lista): void {
-    console.log('📋 Seleccionando lista:', lista);
-
+  /**
+   *
+   * @param lista
+   */
+  public seleccionarLista(lista: Lista): void {
     this.storageService
       .getListaCompleta(lista.id)
       .pipe(takeUntil(this.destroy$))
@@ -302,7 +233,10 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   // ===== GESTIÓN DE TAREAS =====
 
-  async crearTarea(): Promise<void> {
+  /**
+   *
+   */
+  public async crearTarea(): Promise<void> {
     if (!this.listaActual || !this.nuevoTextoTarea.trim()) {
       await this.notificationService.validationError('El texto de la tarea no puede estar vacío');
       return;
@@ -325,7 +259,11 @@ export class HomeComponent implements OnInit, OnDestroy {
       });
   }
 
-  iniciarEdicionTarea(tarea: Tarea): void {
+  /**
+   *
+   * @param tarea
+   */
+  public iniciarEdicionTarea(tarea: Tarea): void {
     this.taskEditState = {
       isEditing: true,
       taskId: tarea.id,
@@ -334,7 +272,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.nuevoTextoTarea = tarea.tarea;
     this.cdr.markForCheck();
 
-    // Enfocar el input
     setTimeout(() => {
       const input = document.querySelector('input[matInput]') as HTMLInputElement;
       if (input) {
@@ -344,13 +281,19 @@ export class HomeComponent implements OnInit, OnDestroy {
     }, 100);
   }
 
-  cancelarEdicionTarea(): void {
+  /**
+   *
+   */
+  public cancelarEdicionTarea(): void {
     this.taskEditState = { isEditing: false };
     this.nuevoTextoTarea = '';
     this.cdr.markForCheck();
   }
 
-  async actualizarTarea(): Promise<void> {
+  /**
+   *
+   */
+  public async actualizarTarea(): Promise<void> {
     if (!this.listaActual || !this.taskEditState.taskId || !this.nuevoTextoTarea.trim()) {
       await this.notificationService.validationError('El texto de la tarea no puede estar vacío');
       return;
@@ -371,7 +314,11 @@ export class HomeComponent implements OnInit, OnDestroy {
       });
   }
 
-  async eliminarTarea(tarea: Tarea): Promise<void> {
+  /**
+   *
+   * @param tarea
+   */
+  public async eliminarTarea(tarea: Tarea): Promise<void> {
     const result = await this.notificationService.confirmDeleteTarea();
 
     if (result.isConfirmed && this.listaActual) {
@@ -390,8 +337,14 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
-  toggleTareaCompleted(tarea: Tarea): void {
-    if (!this.listaActual) return;
+  /**
+   *
+   * @param tarea
+   */
+  public toggleTareaCompleted(tarea: Tarea): void {
+    if (!this.listaActual) {
+      return;
+    }
 
     this.storageService
       .toggleTareaCompleted(this.listaActual.id, tarea.id)
@@ -406,8 +359,13 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   // ===== GESTIÓN DE SELECCIÓN MÚLTIPLE =====
 
-  toggleSeleccionarTodas(): void {
-    if (!this.listaActual) return;
+  /**
+   *
+   */
+  public toggleSeleccionarTodas(): void {
+    if (!this.listaActual) {
+      return;
+    }
 
     const nuevoEstado = !this.selectionState.allSelected;
 
@@ -422,8 +380,13 @@ export class HomeComponent implements OnInit, OnDestroy {
       });
   }
 
-  async eliminarTareasSeleccionadas(): Promise<void> {
-    if (!this.listaActual || !this.selectionState.hasSelected) return;
+  /**
+   *
+   */
+  public async eliminarTareasSeleccionadas(): Promise<void> {
+    if (!this.listaActual || !this.selectionState.hasSelected) {
+      return;
+    }
 
     const result = await this.notificationService.confirmDeleteTareasSeleccionadas(this.selectionState.selectedCount);
 
@@ -445,8 +408,14 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   // ===== DRAG & DROP =====
 
-  onTareaDrop(event: CdkDragDrop<Tarea[]>): void {
-    if (!this.listaActual || event.previousIndex === event.currentIndex) return;
+  /**
+   *
+   * @param event
+   */
+  public onTareaDrop(event: CdkDragDrop<Tarea[]>): void {
+    if (!this.listaActual || event.previousIndex === event.currentIndex) {
+      return;
+    }
 
     this.storageService
       .reordenarTareas(this.listaActual.id, event.previousIndex, event.currentIndex)
@@ -459,10 +428,127 @@ export class HomeComponent implements OnInit, OnDestroy {
       });
   }
 
-  // ===== MÉTODOS DE UTILIDAD =====
+  // ===== GETTERS PARA EL TEMPLATE =====
 
+  /**
+   *
+   */
+  public get puedeSeleccionarTodas(): boolean {
+    return this.listaActual?.tareas ? this.listaActual.tareas.length > 1 : false;
+  }
+
+  /**
+   *
+   */
+  public get puedeEliminarSeleccionadas(): boolean {
+    return this.selectionState.hasSelected;
+  }
+
+  /**
+   *
+   */
+  public get textoBotonSeleccionar(): string {
+    return this.selectionState.allSelected ? 'Deseleccionar todas' : 'Seleccionar todas';
+  }
+
+  /**
+   *
+   */
+  public get modoFormulario(): 'create' | 'edit' {
+    return this.drawerState.mode;
+  }
+
+  /**
+   *
+   */
+  public get estaEditandoTarea(): boolean {
+    return this.taskEditState.isEditing;
+  }
+
+  // ===== MÉTODOS PÚBLICOS PARA TEMPLATE =====
+
+  /**
+   *
+   * @param listaId
+   */
+  public getTaskCount(listaId: string): number {
+    try {
+      const storageKey = `${StorageKeys.LISTA_PREFIX}${listaId}`;
+      const tareasData = localStorage.getItem(storageKey);
+      if (tareasData) {
+        const tareas = JSON.parse(tareasData);
+        return Array.isArray(tareas) ? tareas.length : 0;
+      }
+      return 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  // ===== TRACKING FUNCTIONS PARA PERFORMANCE =====
+
+  /**
+   *
+   * @param index
+   * @param lista
+   */
+  public trackByListaId(index: number, lista: Lista): string {
+    return lista.id;
+  }
+
+  /**
+   *
+   * @param index
+   * @param tarea
+   */
+  public trackByTareaId(index: number, tarea: Tarea): string {
+    return tarea.id;
+  }
+
+  // ===== MÉTODOS PRIVADOS =====
+
+  /**
+   *
+   */
+  private loadListas(): void {
+    this.storageService
+      .getListas()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: response => {
+          if (response.success && response.data) {
+            this.listas = response.data;
+            this.cdr.markForCheck();
+          }
+        },
+        error: () => {
+          this.notificationService.errorGeneric('cargar las listas');
+        },
+      });
+  }
+
+  /**
+   *
+   */
+  private subscribeToListasChanges(): void {
+    this.storageService.listas$.pipe(takeUntil(this.destroy$)).subscribe(listas => {
+      this.listas = listas;
+
+      if (this.listaActual && !listas.find(l => l.id === this.listaActual!.id)) {
+        this.listaActual = null;
+      }
+
+      this.cdr.markForCheck();
+    });
+  }
+
+  /**
+   *
+   */
   private recargarListaActual(): void {
-    if (!this.listaActual) return;
+    if (!this.listaActual) {
+      return;
+    }
 
     this.storageService
       .getListaCompleta(this.listaActual.id)
@@ -478,6 +564,9 @@ export class HomeComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   *
+   */
   private actualizarEstadoSeleccion(): void {
     if (!this.listaActual?.tareas) {
       this.selectionState = { allSelected: false, hasSelected: false, selectedCount: 0 };
@@ -492,100 +581,5 @@ export class HomeComponent implements OnInit, OnDestroy {
       hasSelected: tareasSeleccionadas.length > 0,
       selectedCount: tareasSeleccionadas.length,
     };
-  }
-
-  getTaskCount(listaId: string): number {
-    try {
-      const storageKey = `checklist_lista_${listaId}`;
-      const tareasData = localStorage.getItem(storageKey);
-      if (tareasData) {
-        const tareas = JSON.parse(tareasData);
-        return Array.isArray(tareas) ? tareas.length : 0;
-      }
-      return 0;
-    } catch (error) {
-      console.warn('Error getting task count:', error);
-      return 0;
-    }
-  }
-
-  // ===== GETTERS PARA EL TEMPLATE =====
-
-  get puedeSeleccionarTodas(): boolean {
-    return this.listaActual?.tareas ? this.listaActual.tareas.length > 1 : false;
-  }
-
-  get puedeEliminarSeleccionadas(): boolean {
-    return this.selectionState.hasSelected;
-  }
-
-  get textoBotonSeleccionar(): string {
-    return this.selectionState.allSelected ? 'Deseleccionar todas' : 'Seleccionar todas';
-  }
-
-  get modoFormulario(): 'create' | 'edit' {
-    return this.drawerState.mode;
-  }
-
-  get estaEditandoTarea(): boolean {
-    return this.taskEditState.isEditing;
-  }
-
-  // ===== TRACKING FUNCTIONS PARA PERFORMANCE =====
-
-  trackByListaId(index: number, lista: Lista): string {
-    return lista.id;
-  }
-
-  trackByTareaId(index: number, tarea: Tarea): string {
-    return tarea.id;
-  }
-
-  // ===== MÉTODOS DE DEBUG (REMOVER EN PRODUCCIÓN) =====
-
-  debugState(): void {
-    console.log('=== DEBUG STATE ===');
-    console.log('drawerState:', this.drawerState);
-    console.log('nuevoTituloLista:', this.nuevoTituloLista);
-    console.log('modoFormulario:', this.modoFormulario);
-    console.log('listas:', this.listas);
-    console.log('listaActual:', this.listaActual);
-    console.log('localStorage keys:', Object.keys(localStorage));
-  }
-
-  testStorageService(): void {
-    console.log('=== TEST STORAGE SERVICE ===');
-
-    // Test básico de creación
-    this.storageService.crearLista('Test Lista ' + Date.now()).subscribe({
-      next: response => {
-        console.log('Test crearLista response:', response);
-        if (response.success) {
-          console.log('✅ StorageService funcionando correctamente');
-        } else {
-          console.log('❌ StorageService error:', response.error);
-        }
-      },
-      error: error => {
-        console.error('❌ StorageService error:', error);
-      },
-    });
-  }
-
-  onDebugClick(): void {
-    this.debugState();
-    this.testStorageService();
-  }
-
-  resetState(): void {
-    console.log('🔄 Reseteando estado...');
-
-    this.drawerState = { opened: false, mode: 'create' };
-    this.nuevoTituloLista = '';
-    this.taskEditState = { isEditing: false };
-    this.selectionState = { allSelected: false, hasSelected: false, selectedCount: 0 };
-
-    this.cdr.markForCheck();
-    console.log('✅ Estado reseteado');
   }
 }

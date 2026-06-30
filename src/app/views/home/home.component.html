@@ -10,68 +10,79 @@
   </button>
 
   <!-- Botón Cancelar (solo visible en modo edición) -->
-  <button
-    id="btnEditarLista"
-    mat-raised-button
-    class="btn btn-outline-danger"
-    *ngIf="modoFormulario === 'edit'"
-    (click)="cerrarDrawer()"
-    type="button">
-    Cancelar
-  </button>
+  @if (modoFormulario === 'edit') {
+    <button
+      id="btnEditarLista"
+      mat-raised-button
+      class="btn btn-outline-danger"
+      (click)="cerrarDrawer()"
+      type="button">
+      Cancelar
+    </button>
+  }
 
   <!-- Drawer/Modal para añadir/editar lista -->
-  <div class="modal-overlay" *ngIf="drawerState.opened" (click)="cerrarDrawer()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h4>{{ modoFormulario === 'create' ? 'Nueva Lista' : 'Editar Lista' }}</h4>
-        <button type="button" class="close-btn" (click)="cerrarDrawer()">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
+  @if (drawerState.opened) {
+    <div
+      class="modal-overlay"
+      (click)="cerrarDrawer()"
+      (keydown.escape)="cerrarDrawer()"
+      role="button"
+      tabindex="0"
+      aria-label="Cerrar modal">
+      <div class="modal-content" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="-1">
+        <div class="modal-header">
+          <h4>{{ modoFormulario === 'create' ? 'Nueva Lista' : 'Editar Lista' }}</h4>
+          <button type="button" class="close-btn" (click)="cerrarDrawer()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
 
-      <div class="modal-body">
-        <div class="row">
-          <div class="col-12">
-            <mat-form-field class="full-width">
-              <mat-label>Nombre de la lista</mat-label>
-              <input
-                [(ngModel)]="nuevoTituloLista"
-                (keyup.enter)="modoFormulario === 'create' ? crearLista() : actualizarLista()"
-                matInput
-                placeholder="Ingresa el nombre de la lista"
-                #listaInput
-                autocomplete="off" />
-            </mat-form-field>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-12">
+              <mat-form-field class="full-width">
+                <mat-label>Nombre de la lista</mat-label>
+                <input
+                  [(ngModel)]="nuevoTituloLista"
+                  (keyup.enter)="modoFormulario === 'create' ? crearLista() : actualizarLista()"
+                  matInput
+                  placeholder="Ingresa el nombre de la lista"
+                  #listaInput
+                  autocomplete="off" />
+              </mat-form-field>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="modal-footer">
-        <button mat-button type="button" (click)="cerrarDrawer()">Cancelar</button>
+        <div class="modal-footer">
+          <button mat-button type="button" (click)="cerrarDrawer()">Cancelar</button>
 
-        <button
-          *ngIf="modoFormulario === 'create'"
-          mat-raised-button
-          color="primary"
-          [disabled]="!nuevoTituloLista?.trim()"
-          (click)="crearLista()"
-          type="button">
-          Crear Lista
-        </button>
+          @if (modoFormulario === 'create') {
+            <button
+              mat-raised-button
+              color="primary"
+              [disabled]="!nuevoTituloLista.trim()"
+              (click)="crearLista()"
+              type="button">
+              Crear Lista
+            </button>
+          }
 
-        <button
-          *ngIf="modoFormulario === 'edit'"
-          mat-raised-button
-          color="primary"
-          [disabled]="!nuevoTituloLista?.trim()"
-          (click)="actualizarLista()"
-          type="button">
-          Actualizar Lista
-        </button>
+          @if (modoFormulario === 'edit') {
+            <button
+              mat-raised-button
+              color="primary"
+              [disabled]="!nuevoTituloLista.trim()"
+              (click)="actualizarLista()"
+              type="button">
+              Actualizar Lista
+            </button>
+          }
+        </div>
       </div>
     </div>
-  </div>
+  }
 </nav>
 
 <div class="d-flex" id="wrapper">
@@ -82,209 +93,202 @@
     </div>
 
     <div class="list-group list-group-flush">
-      <button
-        *ngFor="let lista of listas; trackBy: trackByListaId; let i = index"
-        [id]="'lista-' + lista.id"
-        (click)="seleccionarLista(lista)"
-        class="list-group-item list-group-item-action bg-light"
-        [class.active]="listaActual?.id === lista.id"
-        type="button">
-        {{ lista.title }}
-        <span class="task-counter" *ngIf="getTaskCount(lista.id) > 0">
-          {{ getTaskCount(lista.id) }}
-        </span>
-      </button>
+      @for (lista of listas; track lista.id) {
+        <button
+          [id]="'lista-' + lista.id"
+          (click)="seleccionarLista(lista)"
+          class="list-group-item list-group-item-action bg-light"
+          [class.active]="listaActual?.id === lista.id"
+          type="button">
+          {{ lista.title }}
+          @if (getTaskCount(lista.id) > 0) {
+            <span class="task-counter">{{ getTaskCount(lista.id) }}</span>
+          }
+        </button>
+      }
     </div>
 
     <!-- Mensaje cuando no hay listas -->
-    <div *ngIf="listas.length === 0" class="empty-state">
-      <h4>No hay listas</h4>
-      <p>Crea tu primera lista usando el botón "Nueva lista"</p>
-    </div>
+    @if (listas.length === 0) {
+      <div class="empty-state">
+        <h4>No hay listas</h4>
+        <p>Crea tu primera lista usando el botón "Nueva lista"</p>
+      </div>
+    }
   </div>
 
   <!-- Contenido principal -->
   <div id="page-content-wrapper">
     <div class="container-fluid">
-      <!-- Vista de lista seleccionada -->
-      <div class="todos form-wrap" *ngIf="listaActual">
-        <!-- Título de la Lista con opciones -->
-        <h4>
-          {{ listaActual.title }}
-          <button
-            mat-icon-button
-            [matMenuTriggerFor]="menu"
-            class="list-opciones"
-            aria-label="Opciones de lista"
-            type="button">
-            <mat-icon>more_vert</mat-icon>
-          </button>
-
-          <mat-menu #menu="matMenu">
-            <button mat-menu-item (click)="abrirFormularioEditarLista(listaActual)" type="button">
-              <mat-icon>edit</mat-icon>
-              <span>Editar lista</span>
-            </button>
-            <button mat-menu-item (click)="eliminarLista(listaActual)" type="button">
-              <mat-icon>delete</mat-icon>
-              <span>Eliminar lista</span>
-            </button>
-          </mat-menu>
-        </h4>
-
-        <div class="form-field-wrap">
-          <!-- Acciones para tareas -->
-          <div class="actions-toolbar mb-3">
+      @if (listaActual) {
+        <!-- Vista de lista seleccionada -->
+        <div class="todos form-wrap">
+          <!-- Título de la Lista con opciones -->
+          <h4>
+            {{ listaActual.title }}
             <button
-              mat-raised-button
-              class="app-button"
-              (click)="toggleSeleccionarTodas()"
-              [disabled]="!puedeSeleccionarTodas"
+              mat-icon-button
+              [matMenuTriggerFor]="menu"
+              class="list-opciones"
+              aria-label="Opciones de lista"
               type="button">
-              {{ textoBotonSeleccionar }}
+              <mat-icon>more_vert</mat-icon>
             </button>
 
-            <button
-              mat-raised-button
-              class="delete-selected"
-              (click)="eliminarTareasSeleccionadas()"
-              [disabled]="!puedeEliminarSeleccionadas"
-              type="button">
-              Eliminar seleccionadas
-              <span class="badge" *ngIf="selectionState.selectedCount > 0">
-                {{ selectionState.selectedCount }}
-              </span>
-            </button>
-          </div>
+            <mat-menu #menu="matMenu">
+              <button mat-menu-item (click)="abrirFormularioEditarLista(listaActual)" type="button">
+                <mat-icon>edit</mat-icon>
+                <span>Editar lista</span>
+              </button>
+              <button mat-menu-item (click)="eliminarLista(listaActual)" type="button">
+                <mat-icon>delete</mat-icon>
+                <span>Eliminar lista</span>
+              </button>
+            </mat-menu>
+          </h4>
 
-          <!-- Formulario para añadir/editar tarea -->
-          <div class="task-form mb-4">
-            <div class="row">
-              <div class="col-md-8">
-                <mat-form-field class="full-width">
-                  <mat-label>{{ estaEditandoTarea ? 'Editar tarea' : 'Nueva tarea' }}</mat-label>
-                  <input
-                    type="text"
-                    [(ngModel)]="nuevoTextoTarea"
-                    (keyup.enter)="estaEditandoTarea ? actualizarTarea() : crearTarea()"
-                    matInput
-                    #tareaInput
-                    autocomplete="off" />
-                </mat-form-field>
-              </div>
-              <div class="col-md-4">
-                <div class="task-form-buttons">
-                  <button
-                    *ngIf="!estaEditandoTarea"
-                    mat-raised-button
-                    class="add-button"
-                    [disabled]="!nuevoTextoTarea?.trim()"
-                    (click)="crearTarea()"
-                    type="button">
-                    <mat-icon>add</mat-icon>
-                    Añadir
-                  </button>
+          <div class="form-field-wrap">
+            <!-- Acciones para tareas -->
+            <div class="actions-toolbar mb-3">
+              <button
+                mat-raised-button
+                class="app-button"
+                (click)="toggleSeleccionarTodas()"
+                [disabled]="!puedeSeleccionarTodas"
+                type="button">
+                {{ textoBotonSeleccionar }}
+              </button>
 
-                  <div *ngIf="estaEditandoTarea" class="edit-buttons">
-                    <button
-                      mat-raised-button
-                      class="edit-button"
-                      [disabled]="!nuevoTextoTarea?.trim()"
-                      (click)="actualizarTarea()"
-                      type="button">
-                      <mat-icon>save</mat-icon>
-                      Guardar
-                    </button>
-                    <button mat-button class="cancel-button" (click)="cancelarEdicionTarea()" type="button">
-                      <mat-icon>cancel</mat-icon>
-                      Cancelar
-                    </button>
+              <button
+                mat-raised-button
+                class="delete-selected"
+                (click)="eliminarTareasSeleccionadas()"
+                [disabled]="!puedeEliminarSeleccionadas"
+                type="button">
+                Eliminar seleccionadas
+                @if (selectionState.selectedCount > 0) {
+                  <span class="badge">{{ selectionState.selectedCount }}</span>
+                }
+              </button>
+            </div>
+
+            <!-- Formulario para añadir/editar tarea -->
+            <div class="task-form mb-4">
+              <div class="row">
+                <div class="col-md-8">
+                  <mat-form-field class="full-width">
+                    <mat-label>{{ estaEditandoTarea ? 'Editar tarea' : 'Nueva tarea' }}</mat-label>
+                    <input
+                      type="text"
+                      [(ngModel)]="nuevoTextoTarea"
+                      (keyup.enter)="estaEditandoTarea ? actualizarTarea() : crearTarea()"
+                      matInput
+                      #tareaInput
+                      autocomplete="off" />
+                  </mat-form-field>
+                </div>
+                <div class="col-md-4">
+                  <div class="task-form-buttons">
+                    @if (!estaEditandoTarea) {
+                      <button
+                        mat-raised-button
+                        class="add-button"
+                        [disabled]="!nuevoTextoTarea.trim()"
+                        (click)="crearTarea()"
+                        type="button">
+                        <mat-icon>add</mat-icon>
+                        Añadir
+                      </button>
+                    }
+
+                    @if (estaEditandoTarea) {
+                      <div class="edit-buttons">
+                        <button
+                          mat-raised-button
+                          class="edit-button"
+                          [disabled]="!nuevoTextoTarea.trim()"
+                          (click)="actualizarTarea()"
+                          type="button">
+                          <mat-icon>save</mat-icon>
+                          Guardar
+                        </button>
+                        <button mat-button class="cancel-button" (click)="cancelarEdicionTarea()" type="button">
+                          <mat-icon>cancel</mat-icon>
+                          Cancelar
+                        </button>
+                      </div>
+                    }
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- Lista de tareas con drag & drop -->
-          <div class="tasks-container">
-            <ul
-              cdkDropList
-              (cdkDropListDropped)="onTareaDrop($event)"
-              class="task-list"
-              *ngIf="listaActual.tareas && listaActual.tareas.length > 0">
-              <li
-                class="example-box"
-                cdkDrag
-                *ngFor="let tarea of listaActual.tareas; trackBy: trackByTareaId; let i = index"
-                [class.task-completed]="tarea.completed">
-                <div class="task-content">
-                  <mat-checkbox
-                    class="task-checkbox"
-                    [checked]="tarea.completed"
-                    (change)="toggleTareaCompleted(tarea)">
-                  </mat-checkbox>
+            <!-- Lista de tareas con drag & drop -->
+            <div class="tasks-container">
+              @if (listaActual.tareas && listaActual.tareas.length > 0) {
+                <ul cdkDropList (cdkDropListDropped)="onTareaDrop($event)" class="task-list">
+                  @for (tarea of listaActual.tareas; track tarea.id) {
+                    <li class="example-box" cdkDrag [class.task-completed]="tarea.completed">
+                      <div class="task-content">
+                        <mat-checkbox
+                          class="task-checkbox"
+                          [checked]="tarea.completed"
+                          (change)="toggleTareaCompleted(tarea)">
+                        </mat-checkbox>
 
-                  <span class="task-text" [class.completed]="tarea.completed">
-                    {{ tarea.tarea }}
-                  </span>
+                        <span class="task-text" [class.completed]="tarea.completed">
+                          {{ tarea.tarea }}
+                        </span>
+                      </div>
+
+                      <div class="task-actions">
+                        <button
+                          mat-icon-button
+                          class="edit-action"
+                          (click)="iniciarEdicionTarea(tarea)"
+                          [attr.aria-label]="'Editar tarea: ' + tarea.tarea"
+                          type="button">
+                          <mat-icon>edit</mat-icon>
+                        </button>
+
+                        <button
+                          mat-icon-button
+                          class="delete-action"
+                          (click)="eliminarTarea(tarea)"
+                          [attr.aria-label]="'Eliminar tarea: ' + tarea.tarea"
+                          type="button">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </div>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <div>
+                  <h4>No hay tareas en esta lista</h4>
+                  <p>Añade tu primera tarea usando el formulario de arriba</p>
                 </div>
-
-                <div class="task-actions">
-                  <button
-                    mat-icon-button
-                    class="edit-action"
-                    (click)="iniciarEdicionTarea(tarea)"
-                    [attr.aria-label]="'Editar tarea: ' + tarea.tarea"
-                    type="button">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-
-                  <button
-                    mat-icon-button
-                    class="delete-action"
-                    (click)="eliminarTarea(tarea)"
-                    [attr.aria-label]="'Eliminar tarea: ' + tarea.tarea"
-                    type="button">
-                    <mat-icon>delete</mat-icon>
-                  </button>
-                </div>
-              </li>
-            </ul>
-
-            <!-- Mensaje cuando no hay tareas -->
-            <div *ngIf="!listaActual.tareas || listaActual.tareas.length === 0">
-              <h4>No hay tareas en esta lista</h4>
-              <p>Añade tu primera tarea usando el formulario de arriba</p>
+              }
             </div>
           </div>
         </div>
-      </div>
+      } @else {
+        <!-- Vista cuando no hay lista seleccionada -->
+        <div class="welcome-state">
+          <h2>¡Bienvenido a tu ToDo List!</h2>
+          <p>Selecciona una lista del panel izquierdo para comenzar, o crea una nueva lista.</p>
 
-      <!-- Vista cuando no hay lista seleccionada -->
-      <div *ngIf="!listaActual" class="welcome-state">
-        <h2>¡Bienvenido a tu ToDo List!</h2>
-        <p>Selecciona una lista del panel izquierdo para comenzar, o crea una nueva lista.</p>
-
-        <button
-          mat-raised-button
-          color="primary"
-          class="welcome-button"
-          (click)="abrirFormularioNuevaLista()"
-          type="button">
-          <mat-icon>add</mat-icon>
-          Crear mi primera lista
-        </button>
-      </div>
+          <button
+            mat-raised-button
+            color="primary"
+            class="welcome-button"
+            (click)="abrirFormularioNuevaLista()"
+            type="button">
+            <mat-icon>add</mat-icon>
+            Crear mi primera lista
+          </button>
+        </div>
+      }
     </div>
   </div>
-</div>
-
-<!-- Debug info (remover en producción) -->
-<div class="debug-info" *ngIf="false">
-  <h5>Debug Info:</h5>
-  <p>Drawer State: {{ drawerState | json }}</p>
-  <p>Modo Formulario: {{ modoFormulario }}</p>
-  <p>Nuevo Título: "{{ nuevoTituloLista }}"</p>
-  <p>Lista Actual: {{ listaActual?.title || 'Ninguna' }}</p>
-  <p>Total Listas: {{ listas.length }}</p>
 </div>
