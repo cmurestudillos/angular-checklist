@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { BehaviorSubject, Observable, of } from 'rxjs';
 import { ERROR_MESSAGES } from '../constants/error-messages.constant';
 import { StorageKeys } from '../enums/storage-keys.enum';
 import { ListaCompleta } from '../models/lista-completa.model';
@@ -9,6 +8,9 @@ import { Tarea } from '../models/tarea.model';
 import { ServiceResponse } from '../types/service-response.type';
 import { UuidUtil } from '../utils/uuid.util';
 
+/**
+ *
+ */
 @Injectable({
   providedIn: 'root',
 })
@@ -19,6 +21,9 @@ export class StorageService {
   private listasSubject = new BehaviorSubject<Lista[]>([]);
   public listas$ = this.listasSubject.asObservable();
 
+  /**
+   *
+   */
   constructor() {
     this.storageAvailable = this.checkStorageAvailability();
     this.loadListasFromStorage();
@@ -26,6 +31,9 @@ export class StorageService {
 
   // ===== MÉTODOS PRIVADOS DE UTILIDAD =====
 
+  /**
+   *
+   */
   private checkStorageAvailability(): boolean {
     try {
       const test = '__storage_test__';
@@ -37,6 +45,10 @@ export class StorageService {
     }
   }
 
+  /**
+   *
+   * @param error
+   */
   private handleStorageError<T>(error: any): Observable<ServiceResponse<T>> {
     console.error('Storage error:', error);
     return of({
@@ -46,12 +58,21 @@ export class StorageService {
     });
   }
 
+  /**
+   *
+   * @param listaId
+   */
   private generateStorageKey(listaId: string): string {
     return `${StorageKeys.LISTA_PREFIX}${listaId}`;
   }
 
+  /**
+   *
+   */
   private loadListasFromStorage(): void {
-    if (!this.storageAvailable) return;
+    if (!this.storageAvailable) {
+      return;
+    }
 
     try {
       const listasMetaData = localStorage.getItem(StorageKeys.LISTAS_META);
@@ -64,8 +85,14 @@ export class StorageService {
     }
   }
 
+  /**
+   *
+   * @param listas
+   */
   private saveListasMetaData(listas: Lista[]): void {
-    if (!this.storageAvailable) return;
+    if (!this.storageAvailable) {
+      return;
+    }
 
     try {
       localStorage.setItem(StorageKeys.LISTAS_META, JSON.stringify(listas));
@@ -77,6 +104,9 @@ export class StorageService {
 
   // ===== MÉTODOS PÚBLICOS PARA LISTAS =====
 
+  /**
+   *
+   */
   public getListas(): Observable<ServiceResponse<Lista[]>> {
     try {
       const currentListas = this.listasSubject.value;
@@ -90,6 +120,10 @@ export class StorageService {
     }
   }
 
+  /**
+   *
+   * @param listaId
+   */
   public getListaCompleta(listaId: string): Observable<ServiceResponse<ListaCompleta>> {
     try {
       const listas = this.listasSubject.value;
@@ -122,6 +156,10 @@ export class StorageService {
     }
   }
 
+  /**
+   *
+   * @param titulo
+   */
   public crearLista(titulo: string): Observable<ServiceResponse<Lista>> {
     try {
       const currentListas = this.listasSubject.value;
@@ -159,6 +197,11 @@ export class StorageService {
     }
   }
 
+  /**
+   *
+   * @param listaId
+   * @param nuevoTitulo
+   */
   public actualizarLista(listaId: string, nuevoTitulo: string): Observable<ServiceResponse<Lista>> {
     try {
       const currentListas = this.listasSubject.value;
@@ -206,6 +249,10 @@ export class StorageService {
     }
   }
 
+  /**
+   *
+   * @param listaId
+   */
   public eliminarLista(listaId: string): Observable<ServiceResponse<void>> {
     try {
       const currentListas = this.listasSubject.value;
@@ -238,6 +285,10 @@ export class StorageService {
 
   // ===== MÉTODOS PÚBLICOS PARA TAREAS =====
 
+  /**
+   *
+   * @param listaId
+   */
   public getTareas(listaId: string): Observable<ServiceResponse<Tarea[]>> {
     try {
       const storageKey = this.generateStorageKey(listaId);
@@ -254,6 +305,11 @@ export class StorageService {
     }
   }
 
+  /**
+   *
+   * @param listaId
+   * @param textoTarea
+   */
   public crearTarea(listaId: string, textoTarea: string): Observable<ServiceResponse<Tarea>> {
     try {
       const storageKey = this.generateStorageKey(listaId);
@@ -292,6 +348,12 @@ export class StorageService {
     }
   }
 
+  /**
+   *
+   * @param listaId
+   * @param tareaId
+   * @param nuevoTexto
+   */
   public actualizarTarea(listaId: string, tareaId: string, nuevoTexto: string): Observable<ServiceResponse<Tarea>> {
     try {
       const storageKey = this.generateStorageKey(listaId);
@@ -328,6 +390,11 @@ export class StorageService {
     }
   }
 
+  /**
+   *
+   * @param listaId
+   * @param tareaId
+   */
   public toggleTareaCompleted(listaId: string, tareaId: string): Observable<ServiceResponse<Tarea>> {
     try {
       const storageKey = this.generateStorageKey(listaId);
@@ -365,6 +432,11 @@ export class StorageService {
     }
   }
 
+  /**
+   *
+   * @param listaId
+   * @param tareaId
+   */
   public eliminarTarea(listaId: string, tareaId: string): Observable<ServiceResponse<void>> {
     try {
       const storageKey = this.generateStorageKey(listaId);
@@ -397,6 +469,10 @@ export class StorageService {
     }
   }
 
+  /**
+   *
+   * @param listaId
+   */
   public eliminarTareasSeleccionadas(listaId: string): Observable<ServiceResponse<number>> {
     try {
       const storageKey = this.generateStorageKey(listaId);
@@ -424,6 +500,12 @@ export class StorageService {
     }
   }
 
+  /**
+   *
+   * @param listaId
+   * @param fromIndex
+   * @param toIndex
+   */
   public reordenarTareas(listaId: string, fromIndex: number, toIndex: number): Observable<ServiceResponse<Tarea[]>> {
     try {
       const storageKey = this.generateStorageKey(listaId);
@@ -453,6 +535,11 @@ export class StorageService {
     }
   }
 
+  /**
+   *
+   * @param listaId
+   * @param seleccionar
+   */
   public toggleSeleccionarTodas(listaId: string, seleccionar: boolean): Observable<ServiceResponse<Tarea[]>> {
     try {
       const storageKey = this.generateStorageKey(listaId);

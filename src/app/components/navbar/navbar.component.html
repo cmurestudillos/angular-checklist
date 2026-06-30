@@ -16,9 +16,11 @@
     <span class="flex-spacer"></span>
 
     <!-- Indicador de estado (opcional) -->
-    <div class="status-indicator me-3" *ngIf="hasDataToExport">
-      <mat-icon class="text-success" title="Datos guardados">cloud_done</mat-icon>
-    </div>
+    @if (hasDataToExport) {
+      <div class="status-indicator me-3">
+        <mat-icon class="text-success" title="Datos guardados">cloud_done</mat-icon>
+      </div>
+    }
 
     <!-- Menú principal -->
     <button mat-icon-button [matMenuTriggerFor]="mainMenu" aria-label="Menú principal" class="menu-trigger">
@@ -52,6 +54,20 @@
         <small class="text-muted px-3">APLICACIÓN</small>
       </div>
 
+      @if (canInstall()) {
+        <button mat-menu-item (click)="onInstallApp()">
+          <mat-icon>install_mobile</mat-icon>
+          <span>Instalar aplicación</span>
+        </button>
+      }
+
+      @if (isInstalled()) {
+        <button mat-menu-item disabled>
+          <mat-icon>check_circle</mat-icon>
+          <span>Aplicación instalada</span>
+        </button>
+      }
+
       <button mat-menu-item (click)="onDesktopVersionClick()" disabled>
         <mat-icon>desktop_windows</mat-icon>
         <span>Escritorio</span>
@@ -80,4 +96,6 @@
 </mat-toolbar>
 
 <!-- Barra de progreso para operaciones en curso -->
-<mat-progress-bar mode="indeterminate" *ngIf="isExporting || isImporting" class="loading-bar"> </mat-progress-bar>
+@if (isExporting || isImporting) {
+  <mat-progress-bar mode="indeterminate" class="loading-bar"></mat-progress-bar>
+}
